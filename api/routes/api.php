@@ -20,7 +20,7 @@ Route::middleware(JwtAuthenticate::class)->group(function () {
     Route::put('/me/device', [MeController::class, 'updateDevice']);
     Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
 
-    Route::middleware(JwtAuthenticate::class.':0')->prefix('student')->group(function () {
-        Route::get('/homework', [HomeworkController::class, 'index']);
-    });
+    require __DIR__.'/api_student.php';
+    require __DIR__.'/api_teacher.php';
+    require __DIR__.'/api_admin.php';
 });
