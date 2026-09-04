@@ -240,8 +240,7 @@ paths:
     get:
       tags: [Student]
       summary: Student dashboard summary
-      description: '*Planned* — route stub in `api_student.php`.'
-      x-planned: true
+      description: Implemented — `GET /student/dashboard` in `api_student.php`.
       security:
         - bearerAuth: []
       responses:
@@ -264,8 +263,7 @@ paths:
     get:
       tags: [Student]
       summary: List announcements for the student
-      description: '*Planned* — route stub in `api_student.php`.'
-      x-planned: true
+      description: Implemented — `GET /student/announcements` in `api_student.php`.
       security:
         - bearerAuth: []
       parameters:
@@ -288,11 +286,10 @@ paths:
                       $ref: '#/components/schemas/Announcement'
 
   /student/announcements/{id}/read:
-    post:
+    patch:
       tags: [Student]
       summary: Mark announcement as read
-      description: '*Planned* — route stub in `api_student.php`.'
-      x-planned: true
+      description: Implemented — `PATCH /student/announcements/{id}/read` in `api_student.php`.
       security:
         - bearerAuth: []
       parameters:
@@ -313,8 +310,7 @@ paths:
     get:
       tags: [Student]
       summary: Approved class timetable
-      description: '*Planned* — approved entries only (`ROADMAP.md` Phase 1).'
-      x-planned: true
+      description: Implemented — approved entries only (`GET /student/timetable`).
       security:
         - bearerAuth: []
       parameters:
@@ -343,8 +339,7 @@ paths:
     get:
       tags: [Student]
       summary: Fee ledger (read-only)
-      description: '*Planned* — route stub in `api_student.php`.'
-      x-planned: true
+      description: Implemented — `GET /student/fees` in `api_student.php`.
       security:
         - bearerAuth: []
       responses:
@@ -376,8 +371,7 @@ paths:
     get:
       tags: [Student]
       summary: Report card JSON
-      description: '*Planned* — route stub in `api_student.php`.'
-      x-planned: true
+      description: Implemented — `GET /student/report-card` in `api_student.php`.
       security:
         - bearerAuth: []
       parameters:
@@ -407,12 +401,11 @@ paths:
                         marks:
                           type: number
 
-  /student/report-card/pdf:
+  /student/report-card.pdf:
     get:
       tags: [Student]
       summary: Download report card PDF
-      description: '*Planned* — generated server-side with Dompdf (`ROADMAP.md` Phase 1).'
-      x-planned: true
+      description: Implemented — `GET /student/report-card.pdf` (Dompdf when schema present).
       security:
         - bearerAuth: []
       parameters:

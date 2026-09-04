@@ -2,13 +2,21 @@
 
 This document tracks work **after** the first slice (login + student homework).
 
+## First slice (shipped)
+
+- [x] Auth — login, refresh, logout, change-password
+- [x] `GET /me`, `PUT /me/device`
+- [x] Student homework list (API + Flutter)
+- [x] Teacher/admin Flutter shells (stubs)
+- [x] OpenAPI contract (`openapi.yaml`)
+
 ## Phase 1 — Student app (remaining)
 
-- [ ] Student dashboard (`/student/dashboard`)
-- [ ] Announcements read + mark read
-- [ ] Timetable (approved only)
-- [ ] Fees read-only
-- [ ] Report card + PDF download (Dompdf in API)
+- [x] Student dashboard (`/student/dashboard`)
+- [x] Announcements read + mark read
+- [x] Timetable (approved only)
+- [x] Fees read-only
+- [x] Report card + PDF download (Dompdf in API)
 
 ## Phase 2 — Teacher
 
@@ -32,8 +40,12 @@ This document tracks work **after** the first slice (login + student homework).
 
 ## Phase 5 — Native quality
 
-- [ ] FCM push, biometrics, offline attendance queue
-- [ ] Deep links, tablet layouts, store listings
+- [x] FCM push stub (`FcmService` — needs Firebase config for production)
+- [x] Biometrics stub (`BiometricUnlock` — needs platform permissions)
+- [ ] Offline attendance queue
+- [x] Offline banner stub (`OfflineBanner` — wire `connectivity_plus` for production)
+- [x] Deep links stub (`DeepLinkHandler` — wire `app_links` for production)
+- [ ] Tablet layouts, store listings
 
 ## Phase 6 — Hardening
 
