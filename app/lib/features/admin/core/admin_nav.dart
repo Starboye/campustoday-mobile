@@ -65,6 +65,13 @@ const academicsModules = [
 
 const opsModules = [
   AdminModuleEntry(
+    title: 'Approvals',
+    subtitle: 'Review and action pending requests',
+    icon: Icons.approval_outlined,
+    permission: AdminPermissions.approvals,
+    route: '/admin/ops/approvals',
+  ),
+  AdminModuleEntry(
     title: 'Fees',
     subtitle: 'Fee structures and payment status',
     icon: Icons.payments_outlined,
