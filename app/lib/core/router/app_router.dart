@@ -36,6 +36,7 @@ import '../../features/student/timetable/timetable_screen.dart';
 import '../../features/teacher/announcements/screens/announcement_form_screen.dart';
 import '../../features/teacher/class_timetable/screens/class_timetable_screen.dart';
 import '../../features/teacher/exam_timetable/screens/exam_timetable_screen.dart';
+import '../../features/teacher/homework/models/teacher_homework_item.dart';
 import '../../features/teacher/homework/screens/teacher_homework_form_screen.dart';
 import '../../features/teacher/homework/screens/teacher_homework_list_screen.dart';
 import '../../features/teacher/marks/screens/marks_screen.dart';
@@ -117,15 +118,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: ':id/edit',
-                builder: (_, state) => TeacherHomeworkFormScreen(
-                  homeworkId: int.tryParse(state.pathParameters['id'] ?? ''),
-                ),
+                builder: (_, state) {
+                  final extra = state.extra;
+                  return TeacherHomeworkFormScreen(
+                    existing: extra is TeacherHomeworkItem ? extra : null,
+                  );
+                },
               ),
             ],
           ),
           GoRoute(
             path: 'marks',
-            builder: (_, __) => const TeacherMarksScreen(),
+            builder: (_, __) => const MarksScreen(),
           ),
           GoRoute(
             path: 'announcements',
@@ -141,7 +145,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'students/:id',
-            builder: (_, state) => TeacherStudentDetailScreen(
+            builder: (_, state) => teacher_students.StudentDetailScreen(
               studentId: state.pathParameters['id']!,
             ),
           ),

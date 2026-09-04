@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_constants.dart';
-import '../../../../shared/widgets/async_content.dart';
-import '../models/exam_timetable_models.dart';
 import '../providers/exam_timetable_providers.dart';
 
 class ExamTimetableScreen extends ConsumerWidget {
@@ -17,94 +15,76 @@ class ExamTimetableScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Exam timetable')),
       body: timetableAsync.when(
-        loading: () => const LoadingContent(),
-        error: (e, _) => ErrorContent(
-          message: 'Could not load exam timetable.\n$e',
-          onRetry: () => ref.invalidate(examTimetableProvider),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Could not load exam timetable.\n$e', textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => ref.invalidate(examTimetableProvider),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
         ),
-        data: (slots) {
-          if (slots.isEmpty) {
-            return const EmptyContent(
-              message: 'No exam timetable entries yet.',
-              icon: Icons.calendar_month_outlined,
-            );
+        data: (response) {
+          if (response.items.isEmpty) {
+            return const Center(child: Text('No exam slots scheduled.'));
           }
-
-          final byDate = <String, List<ExamTimetableSlot>>{};
-          for (final slot in slots) {
-            final key = slot.date.isNotEmpty ? slot.date : 'Unknown date';
-            byDate.putIfAbsent(key, () => []).add(slot);
-          }
-
-          final dates = byDate.keys.toList()..sort();
-
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(examTimetableProvider),
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
-              itemCount: dates.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              itemCount: response.items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
-                final dateKey = dates[index];
-                final daySlots = byDate[dateKey]!;
-                final parsed = DateTime.tryParse(dateKey);
-                final label =
-                    parsed != null ? DateFormat('EEE, d MMM yyyy').format(parsed) : dateKey;
+                final slot = response.items[index];
+                final date = DateTime.tryParse(slot.date);
+                final dateLabel = date != null
+                    ? DateFormat('EEE, d MMM yyyy').format(date)
+                    : slot.date;
+                final timeLabel = [
+                  if (slot.startTime != null) slot.startTime,
+                  if (slot.endTime != null) slot.endTime,
+                ].join(' – ');
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: const Color(AppConstants.navyColor),
-                            fontWeight: FontWeight.w700,
-                          ),
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          const Color(AppConstants.primaryColor).withValues(alpha: 0.12),
+                      child: const Icon(
+                        Icons.event_note,
+                        color: Color(AppConstants.primaryColor),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    ...daySlots.map((slot) => _ExamSlotCard(slot: slot)),
-                  ],
+                    title: Text(
+                      slot.examName ?? slot.subjectName ?? 'Exam',
+                      style: const TextStyle(
+                        color: Color(AppConstants.navyColor),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      [
+                        if (slot.classLabel.isNotEmpty) slot.classLabel,
+                        if (slot.subjectName != null) slot.subjectName!,
+                        dateLabel,
+                        if (timeLabel.isNotEmpty) timeLabel,
+                        if (slot.room != null) 'Room ${slot.room}',
+                      ].join(' · '),
+                    ),
+                  ),
                 );
               },
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _ExamSlotCard extends StatelessWidget {
-  const _ExamSlotCard({required this.slot});
-
-  final ExamTimetableSlot slot;
-
-  @override
-  Widget build(BuildContext context) {
-    final subtitleParts = <String>[
-      if (slot.classLabel.isNotEmpty) slot.classLabel,
-      if (slot.startTime != null && slot.endTime != null)
-        '${slot.startTime} – ${slot.endTime}'
-      else if (slot.startTime != null)
-        slot.startTime!,
-      if (slot.room != null && slot.room!.isNotEmpty) 'Room ${slot.room}',
-    ];
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(AppConstants.primaryColor).withValues(alpha: 0.12),
-          child: const Icon(Icons.school_outlined, color: Color(AppConstants.primaryColor)),
-        ),
-        title: Text(
-          slot.subjectName ?? slot.examName ?? 'Exam',
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' · ')) : null,
-        trailing: slot.examName != null && slot.subjectName != null
-            ? Text(slot.examName!, style: Theme.of(context).textTheme.bodySmall)
-            : null,
       ),
     );
   }

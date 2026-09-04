@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/network/dio_client.dart';
+import '../../attendance/models/attendance_models.dart';
+import '../../attendance/providers/attendance_providers.dart';
+import '../data/announcements_repository.dart';
 
 class AnnouncementFormScreen extends ConsumerStatefulWidget {
   const AnnouncementFormScreen({super.key});
@@ -13,58 +15,25 @@ class AnnouncementFormScreen extends ConsumerStatefulWidget {
 
 class _AnnouncementFormScreenState extends ConsumerState<AnnouncementFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _title = TextEditingController();
-  final _message = TextEditingController();
+  final _titleController = TextEditingController();
+  final _messageController = TextEditingController();
   String _targetType = 'class';
-  final _studentId = TextEditingController();
-  final _standard = TextEditingController();
-  final _section = TextEditingController();
+  ClassSectionKey? _classSection;
+  final _studentIdController = TextEditingController();
   bool _saving = false;
 
   @override
   void dispose() {
-    _title.dispose();
-    _message.dispose();
-    _studentId.dispose();
-    _standard.dispose();
-    _section.dispose();
+    _titleController.dispose();
+    _messageController.dispose();
+    _studentIdController.dispose();
     super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
-    try {
-      final dio = ref.read(dioProvider);
-      await dio.postJson('/teacher/announcements', data: {
-        'title': _title.text.trim(),
-        'message': _message.text.trim(),
-        'target_type': _targetType,
-        if (_targetType == 'student') 'student_id': _studentId.text.trim(),
-        if (_targetType == 'class') ...{
-          'standard': int.parse(_standard.text.trim()),
-          'section': _section.text.trim(),
-        },
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Announcement sent')),
-        );
-        context.pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final allocationsAsync = ref.watch(teacherAllocationsProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('New announcement')),
       body: Form(
@@ -73,49 +42,74 @@ class _AnnouncementFormScreenState extends ConsumerState<AnnouncementFormScreen>
           padding: const EdgeInsets.all(16),
           children: [
             TextFormField(
-              controller: _title,
-              decoration: const InputDecoration(labelText: 'Title'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(),
+              ),
+              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextFormField(
-              controller: _message,
-              decoration: const InputDecoration(labelText: 'Message'),
-              maxLines: 4,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              controller: _messageController,
+              decoration: const InputDecoration(
+                labelText: 'Message',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 5,
+              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _targetType,
-              decoration: const InputDecoration(labelText: 'Target'),
+              decoration: const InputDecoration(
+                labelText: 'Audience',
+                border: OutlineInputBorder(),
+              ),
               items: const [
-                DropdownMenuItem(value: 'class', child: Text('Class')),
-                DropdownMenuItem(value: 'student', child: Text('Student')),
-                DropdownMenuItem(value: 'all', child: Text('All')),
+                DropdownMenuItem(value: 'class', child: Text('A class')),
+                DropdownMenuItem(value: 'student', child: Text('Individual student')),
+                DropdownMenuItem(value: 'all', child: Text('All students')),
               ],
               onChanged: (v) => setState(() => _targetType = v ?? 'class'),
             ),
-            if (_targetType == 'student') ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _studentId,
-                decoration: const InputDecoration(labelText: 'Student ID'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+            if (_targetType == 'class') ...[
+              const SizedBox(height: 16),
+              allocationsAsync.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (e, _) => Text('Could not load classes: $e'),
+                data: (classes) {
+                  if (classes.isEmpty) {
+                    return const Text('No class allocations.');
+                  }
+                  if (_classSection == null) {
+                    _classSection = classes.first;
+                  }
+                  return DropdownButtonFormField<ClassSectionKey>(
+                    value: _classSection,
+                    decoration: const InputDecoration(
+                      labelText: 'Class',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: classes
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c.label)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _classSection = v),
+                    validator: (v) => _targetType == 'class' && v == null ? 'Required' : null,
+                  );
+                },
               ),
             ],
-            if (_targetType == 'class') ...[
-              const SizedBox(height: 12),
+            if (_targetType == 'student') ...[
+              const SizedBox(height: 16),
               TextFormField(
-                controller: _standard,
-                decoration: const InputDecoration(labelText: 'Standard'),
-                keyboardType: TextInputType.number,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _section,
-                decoration: const InputDecoration(labelText: 'Section'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                controller: _studentIdController,
+                decoration: const InputDecoration(
+                  labelText: 'Student ID',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    _targetType == 'student' && (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
             ],
             const SizedBox(height: 24),
@@ -127,11 +121,39 @@ class _AnnouncementFormScreenState extends ConsumerState<AnnouncementFormScreen>
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Send'),
+                  : const Text('Send announcement'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+
+    try {
+      await ref.read(announcementsRepositoryProvider).createAnnouncement(
+            title: _titleController.text.trim(),
+            message: _messageController.text.trim(),
+            targetType: _targetType,
+            studentId: _targetType == 'student' ? _studentIdController.text.trim() : null,
+            standard: _targetType == 'class' ? _classSection?.standard : null,
+            section: _targetType == 'class' ? _classSection?.section : null,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Announcement sent.')),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }

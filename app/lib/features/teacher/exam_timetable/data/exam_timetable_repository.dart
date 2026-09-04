@@ -13,10 +13,8 @@ class ExamTimetableRepository {
 
   final Dio _dio;
 
-  Future<List<ExamTimetableSlot>> fetchExamTimetable() async {
+  Future<ExamTimetableResponse> fetchExamTimetable() async {
     final data = await _dio.getJson<Map<String, dynamic>>('/teacher/exam-timetable');
-    return (data['items'] as List<dynamic>)
-        .map((e) => ExamTimetableSlot.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return ExamTimetableResponse.fromJson(data);
   }
 }

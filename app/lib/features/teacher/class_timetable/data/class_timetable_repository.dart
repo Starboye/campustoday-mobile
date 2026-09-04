@@ -29,8 +29,7 @@ class ClassTimetableRepository {
     return ClassTimetableResponse.fromJson(data);
   }
 
-  Future<ClassTimetableResponse> submitTimetable() async {
-    final data = await _dio.postJson<Map<String, dynamic>>('/teacher/class-timetable/submit');
-    return ClassTimetableResponse.fromJson(data);
+  Future<Map<String, dynamic>> submitTimetable() async {
+    return _dio.postJson<Map<String, dynamic>>('/teacher/class-timetable/submit');
   }
 }

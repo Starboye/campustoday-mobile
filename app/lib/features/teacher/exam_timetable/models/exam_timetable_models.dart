@@ -43,3 +43,17 @@ class ExamTimetableSlot {
     );
   }
 }
+
+class ExamTimetableResponse {
+  const ExamTimetableResponse({required this.items});
+
+  final List<ExamTimetableSlot> items;
+
+  factory ExamTimetableResponse.fromJson(Map<String, dynamic> json) {
+    return ExamTimetableResponse(
+      items: (json['items'] as List<dynamic>)
+          .map((e) => ExamTimetableSlot.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}

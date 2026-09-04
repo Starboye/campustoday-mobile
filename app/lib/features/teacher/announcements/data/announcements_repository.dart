@@ -7,42 +7,29 @@ final announcementsRepositoryProvider = Provider<AnnouncementsRepository>((ref) 
   return AnnouncementsRepository(ref.watch(dioProvider));
 });
 
-class AnnouncementPayload {
-  const AnnouncementPayload({
-    required this.title,
-    required this.message,
-    required this.targetType,
-    this.studentId,
-    this.standard,
-    this.section,
-  });
+class AnnouncementsRepository {
+  AnnouncementsRepository(this._dio);
 
-  final String title;
-  final String message;
-  final String targetType;
-  final String? studentId;
-  final int? standard;
-  final String? section;
+  final Dio _dio;
 
-  Map<String, dynamic> toJson() => {
+  Future<Map<String, dynamic>> createAnnouncement({
+    required String title,
+    required String message,
+    required String targetType,
+    String? studentId,
+    int? standard,
+    String? section,
+  }) async {
+    return _dio.postJson<Map<String, dynamic>>(
+      '/teacher/announcements',
+      data: {
         'title': title,
         'message': message,
         'target_type': targetType,
         if (studentId != null) 'student_id': studentId,
         if (standard != null) 'standard': standard,
         if (section != null) 'section': section,
-      };
-}
-
-class AnnouncementsRepository {
-  AnnouncementsRepository(this._dio);
-
-  final Dio _dio;
-
-  Future<void> createAnnouncement(AnnouncementPayload payload) async {
-    await _dio.postJson<Map<String, dynamic>>(
-      '/teacher/announcements',
-      data: payload.toJson(),
+      },
     );
   }
 }
