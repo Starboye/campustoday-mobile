@@ -82,6 +82,15 @@ extension DioResponseX on Dio {
       throw _mapError(e);
     }
   }
+
+  Future<T> patchJson<T>(String path, {Object? data}) async {
+    try {
+      final response = await patch<dynamic>(path, data: data);
+      return response.data as T;
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
 }
 
 ApiException _mapError(DioException e) {

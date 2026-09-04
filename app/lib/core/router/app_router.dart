@@ -7,8 +7,12 @@ import '../../features/auth/models/auth_user.dart';
 import '../../features/auth/providers/auth_controller.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
+import '../../features/student/fees/fees_screen.dart';
 import '../../features/student/homework/homework_screen.dart';
+import '../../features/student/profile/change_password_screen.dart';
+import '../../features/student/report/report_screen.dart';
 import '../../features/student/shell/student_shell.dart';
+import '../../features/student/timetable/timetable_screen.dart';
 import '../../features/teacher/shell/teacher_shell.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -21,12 +25,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final user = authState.valueOrNull;
       final loggingIn = state.matchedLocation == '/login';
       final onSplash = state.matchedLocation == '/splash';
+      final onChangePassword = state.matchedLocation == '/student/change-password';
 
       if (authState.isLoading && onSplash) return null;
       if (authState.isLoading) return '/splash';
 
       if (user == null) {
         return loggingIn || onSplash ? (onSplash ? '/login' : null) : '/login';
+      }
+
+      if (user.isStudent && user.forcePasswordReset && !onChangePassword) {
+        return '/student/change-password';
       }
 
       if (loggingIn || onSplash) {
@@ -45,6 +54,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'homework',
             builder: (_, __) => const HomeworkScreen(),
+          ),
+          GoRoute(
+            path: 'change-password',
+            builder: (_, state) {
+              final requiredReset = state.uri.queryParameters['required'] != 'false';
+              return ChangePasswordScreen(required: requiredReset);
+            },
+          ),
+          GoRoute(
+            path: 'timetable',
+            builder: (_, __) => const TimetableScreen(),
+          ),
+          GoRoute(
+            path: 'fees',
+            builder: (_, __) => const FeesScreen(),
+          ),
+          GoRoute(
+            path: 'report',
+            builder: (_, __) => const ReportScreen(),
           ),
         ],
       ),
