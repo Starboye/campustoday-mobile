@@ -19,6 +19,8 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:hCG6bZ/MzPtK19nvookWzgwEqxqW5L06ge5rF3P58sw="/>
+        <env name="JWT_SECRET" value="campustoday-testing-jwt-secret-key-min-32-chars"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

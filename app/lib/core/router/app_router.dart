@@ -39,7 +39,15 @@ import '../../features/teacher/exam_timetable/screens/exam_timetable_screen.dart
 import '../../features/teacher/homework/screens/teacher_homework_form_screen.dart';
 import '../../features/teacher/homework/screens/teacher_homework_list_screen.dart';
 import '../../features/teacher/marks/screens/marks_screen.dart';
+import '../../features/teacher/announcements/screens/announcement_compose_screen.dart';
+import '../../features/teacher/class_timetable/screens/class_timetable_screen.dart';
+import '../../features/teacher/exam_timetable/screens/exam_timetable_screen.dart';
+import '../../features/teacher/homework/models/teacher_homework_item.dart';
+import '../../features/teacher/homework/screens/teacher_homework_form_screen.dart';
+import '../../features/teacher/homework/screens/teacher_homework_list_screen.dart';
+import '../../features/teacher/marks/screens/marks_screen.dart';
 import '../../features/teacher/shell/teacher_shell.dart';
+import '../../features/teacher/students/screens/student_detail_screen.dart';
 import '../../features/teacher/students/screens/student_detail_screen.dart' as teacher_students;
 
 final appRouterProvider = Provider<GoRouter>((ref) {

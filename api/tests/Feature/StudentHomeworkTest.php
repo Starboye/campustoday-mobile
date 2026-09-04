@@ -16,6 +16,24 @@ class StudentHomeworkTest extends TestCase
             ->assertJson(['message' => 'Unauthenticated.']);
     }
 
+    public function test_homework_accepts_default_date_query(): void
+    {
+        $token = app(JwtService::class)->issueAccessToken(
+            $this->fakeUser(access: 0),
+            [],
+        );
+
+        if (! $this->hasLegacyStudentTable()) {
+            $this->markTestSkipped('MariaDB `student_info` table not available in test DB.');
+        }
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/v1/student/homework');
+
+        $response->assertOk()
+            ->assertJsonStructure(['date', 'items']);
+    }
+
     public function test_homework_rejects_teacher_token(): void
     {
         $token = app(JwtService::class)->issueAccessToken(

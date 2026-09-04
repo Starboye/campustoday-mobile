@@ -10,7 +10,22 @@ class AuthLoginTest extends TestCase
     {
         $response = $this->getJson('/v1/health');
 
-        $response->assertOk();
+        $response->assertJsonStructure(['status', 'service', 'database', 'timestamp'])
+            ->assertJson(['service' => 'CampusToday API']);
+
+        $this->assertContains($response->status(), [200, 503]);
+    }
+
+    public function test_login_rejects_invalid_access_value(): void
+    {
+        $response = $this->postJson('/v1/auth/login', [
+            'username' => 'student',
+            'password' => 'secret',
+            'access' => 99,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['access']);
     }
 
     public function test_login_requires_credentials(): void

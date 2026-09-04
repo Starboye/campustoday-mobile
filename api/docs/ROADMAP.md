@@ -20,23 +20,23 @@ This document tracks work **after** the first slice (login + student homework).
 
 ## Phase 2 — Teacher
 
-- [ ] Attendance GET/PUT with day-lock checks
-- [ ] Homework CRUD
-- [ ] Marks (`marks` table)
-- [ ] Announcements POST
-- [ ] Student dossier (scoped)
-- [ ] Class timetable draft/submit
+- [x] Attendance GET/PUT with day-lock checks (`Teacher\AttendanceController`, Flutter attendance tab)
+- [x] Homework CRUD (`Teacher\HomeworkController`, work hub screens)
+- [x] Marks (`marks` table — `Teacher\MarksController`)
+- [x] Announcements POST (`Teacher\AnnouncementsController`)
+- [x] Student dossier (scoped — `Teacher\StudentsController`, students tab)
+- [x] Class timetable draft/submit (`Teacher\ClassTimetableController`)
 
 ## Phase 3 — Admin core
 
-- [ ] Dashboard, students, teachers
-- [ ] Attendance + locks, homework, marks_new, fees
-- [ ] Approvals, notifications
+- [x] Dashboard, students, teachers (controllers + Flutter screens)
+- [x] Attendance + locks, homework, marks_new, fees (controllers + Flutter screens)
+- [x] Approvals, notifications (controllers + Flutter screens)
 
 ## Phase 4 — Admin complete
 
-- [ ] Planner (tablet-first), exams, analytics
-- [ ] Security, RBAC, delegation, bulk, data quality
+- [x] Planner (tablet-first), exams, analytics (controllers + Flutter screens)
+- [x] Security, RBAC, delegation, bulk, data quality (controllers; Flutter admin shell owned separately)
 
 ## Phase 5 — Native quality
 
@@ -52,3 +52,5 @@ This document tracks work **after** the first slice (login + student homework).
 - [ ] Load tests, permission matrix, dual-write regression suite
 
 All phases use the **same Apache/MariaDB host** as SchoolCRM. SchoolCRM PHP files remain frozen.
+
+**Note:** Admin HTTP routes in `api_admin.php` are still being wired by AdminAPI-Agent; controllers and Flutter screens exist ahead of route registration.

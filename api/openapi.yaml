@@ -7,8 +7,8 @@ info:
 
     **Role access:** `0` = student, `1` = teacher, `2` = admin (must match `user_login.access`).
 
-    Endpoints marked *planned* are documented from route stubs (`api_student.php`, `api_teacher.php`, `api_admin.php`)
-    and `ROADMAP.md`; controllers may not exist yet.
+    Endpoints marked *planned* in OpenAPI may still be awaiting route registration in
+    `api_admin.php` even when controllers and Flutter screens exist (see `ROADMAP.md`).
 servers:
   - url: http://localhost/api/v1
     description: Local Apache alias
