@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/offline/attendance_queue.dart';
+import '../../../../core/offline/attendance_sync_listener.dart';
 import '../data/attendance_repository.dart';
 import '../models/attendance_models.dart';
 
@@ -88,7 +90,7 @@ class AttendanceLocalNotifier extends StateNotifier<AsyncValue<AttendanceSheet>>
     state = AsyncValue.data(optimistic);
 
     try {
-      await _ref.read(attendanceRepositoryProvider).updateAttendance(
+      final result = await _ref.read(attendanceRepositoryProvider).updateAttendance(
             standard: current.standard,
             section: current.section,
             date: current.date,
@@ -96,6 +98,9 @@ class AttendanceLocalNotifier extends StateNotifier<AsyncValue<AttendanceSheet>>
             session: session,
             status: newStatus,
           );
+      if (result == AttendanceUpdateResult.queued) {
+        _ref.invalidate(pendingAttendanceCountProvider);
+      }
       return null;
     } catch (e) {
       state = AsyncValue.data(current);

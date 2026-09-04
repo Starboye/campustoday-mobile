@@ -21,7 +21,7 @@ class MarksRepository {
         if (term != null) 'term': term,
       },
     );
-    return parseListData(data).map(MarksEntry.fromJson).toList();
+    return parseListData(data, key: 'items').map(MarksEntry.fromJson).toList();
   }
 
   Future<MarksEntry> save(Map<String, dynamic> body) async {

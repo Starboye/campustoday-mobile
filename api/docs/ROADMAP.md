@@ -42,14 +42,19 @@ This document tracks work **after** the first slice (login + student homework).
 
 - [x] FCM push stub (`FcmService` — needs Firebase config for production)
 - [x] Biometrics stub (`BiometricUnlock` — needs platform permissions)
-- [ ] Offline attendance queue
+- [x] Offline attendance queue (`AttendanceQueue` + sqflite — sync on reconnect)
 - [x] Offline banner stub (`OfflineBanner` — wire `connectivity_plus` for production)
 - [x] Deep links stub (`DeepLinkHandler` — wire `app_links` for production)
 - [ ] Tablet layouts, store listings
 
 ## Phase 6 — Hardening
 
+- [x] Basic feature smoke tests (`TeacherAttendanceTest`, `AdminDashboardTest`)
 - [ ] Load tests, permission matrix, dual-write regression suite
+
+**Status (Phases 2–4):** Complete — teacher, admin core, and admin complete slices are shipped (controllers + Flutter screens).
+
+**Status (Phases 5–6):** Partial — offline attendance queue and smoke tests landed; tablet layouts, store listings, load tests, and permission matrix remain.
 
 All phases use the **same Apache/MariaDB host** as SchoolCRM. SchoolCRM PHP files remain frozen.
 

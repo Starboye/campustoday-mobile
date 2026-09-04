@@ -33,7 +33,7 @@ import '../../features/student/profile/change_password_screen.dart';
 import '../../features/student/report/report_screen.dart';
 import '../../features/student/shell/student_shell.dart';
 import '../../features/student/timetable/timetable_screen.dart';
-import '../../features/teacher/announcements/screens/announcement_form_screen.dart';
+import '../../features/teacher/announcements/screens/announcement_compose_screen.dart';
 import '../../features/teacher/class_timetable/screens/class_timetable_screen.dart';
 import '../../features/teacher/exam_timetable/screens/exam_timetable_screen.dart';
 import '../../features/teacher/homework/models/teacher_homework_item.dart';
@@ -133,7 +133,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'announcements',
-            builder: (_, __) => const AnnouncementFormScreen(),
+            builder: (_, __) => const AnnouncementComposeScreen(),
           ),
           GoRoute(
             path: 'exam-timetable',

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/offline/attendance_queue.dart';
+import '../../../../core/offline/attendance_sync_listener.dart';
+import '../data/attendance_repository.dart';
 import '../models/attendance_models.dart';
 import '../providers/attendance_providers.dart';
 
@@ -15,9 +18,12 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   String? _errorMessage;
+  String? _queuedMessage;
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(attendanceSyncListenerProvider);
+    final pendingAsync = ref.watch(pendingAttendanceCountProvider);
     final allocationsAsync = ref.watch(teacherAllocationsProvider);
     final selected = ref.watch(selectedClassProvider);
     final selectedDate = ref.watch(attendanceDateProvider);
@@ -102,6 +108,44 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             ],
           ),
         ),
+        pendingAsync.when(
+          data: (count) {
+            if (count == 0) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: MaterialBanner(
+                content: Text(
+                  count == 1
+                      ? '1 attendance change is queued and will sync when you are back online.'
+                      : '$count attendance changes are queued and will sync when you are back online.',
+                ),
+                leading: const Icon(Icons.cloud_upload_outlined, color: Colors.blue),
+                actions: [
+                  TextButton(
+                    onPressed: _syncQueued,
+                    child: const Text('Sync now'),
+                  ),
+                ],
+              ),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
+        if (_queuedMessage != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: MaterialBanner(
+              content: Text(_queuedMessage!),
+              leading: const Icon(Icons.cloud_off_outlined, color: Colors.blue),
+              actions: [
+                TextButton(
+                  onPressed: () => setState(() => _queuedMessage = null),
+                  child: const Text('Dismiss'),
+                ),
+              ],
+            ),
+          ),
         if (_errorMessage != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -119,6 +163,23 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         Expanded(child: _buildStudentList(selected)),
       ],
     );
+  }
+
+  Future<void> _syncQueued() async {
+    final sync = ref.read(attendanceSyncServiceProvider);
+    final result = await sync.syncPending();
+    ref.invalidate(pendingAttendanceCountProvider);
+    if (result.synced > 0) {
+      ref.invalidate(attendanceSheetProvider);
+    }
+    if (!mounted) return;
+    if (result.hasFailures) {
+      setState(() => _errorMessage = result.lastError ?? 'Sync failed.');
+    } else if (result.synced > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Synced ${result.synced} queued change(s).')),
+      );
+    }
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -179,20 +240,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         }
 
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(attendanceSheetProvider),
+          onRefresh: () async {
+            await _syncQueued();
+            ref.invalidate(attendanceSheetProvider);
+          },
           child: _AttendanceList(
             sheet: sheet,
             readOnly: false,
             onToggle: (studentId, session, status) async {
-              final notifier = ref.read(attendanceLocalStateProvider.notifier);
-              // Ensure local notifier is synced
               ref.invalidate(attendanceLocalStateProvider);
               final repo = ref.read(attendanceRepositoryProvider);
               try {
                 final student = sheet.students.firstWhere((s) => s.studentId == studentId);
                 final existing = student.sessions[session];
                 final newStatus = existing == status ? null : status;
-                await repo.updateAttendance(
+                final result = await repo.updateAttendance(
                   standard: sheet.standard,
                   section: sheet.section,
                   date: sheet.date,
@@ -200,7 +262,17 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                   session: session,
                   status: newStatus,
                 );
-                ref.invalidate(attendanceSheetProvider);
+                if (result == AttendanceUpdateResult.queued) {
+                  ref.invalidate(pendingAttendanceCountProvider);
+                  if (mounted) {
+                    setState(
+                      () => _queuedMessage =
+                          'Saved offline. Changes will sync when you reconnect.',
+                    );
+                  }
+                } else {
+                  ref.invalidate(attendanceSheetProvider);
+                }
               } catch (e) {
                 if (mounted) {
                   setState(() => _errorMessage = e.toString());
