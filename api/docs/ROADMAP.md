@@ -57,5 +57,3 @@ This document tracks work **after** the first slice (login + student homework).
 **Status (Phases 5–6):** Partial — offline attendance queue and smoke tests landed; tablet layouts, store listings, load tests, and permission matrix remain.
 
 All phases use the **same Apache/MariaDB host** as SchoolCRM. SchoolCRM PHP files remain frozen.
-
-**Note:** Admin HTTP routes in `api_admin.php` are still being wired by AdminAPI-Agent; controllers and Flutter screens exist ahead of route registration.
