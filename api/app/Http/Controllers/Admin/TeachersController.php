@@ -78,6 +78,40 @@ class TeachersController extends AdminController
         ]), 201);
     }
 
+    public function show(string $id): JsonResponse
+    {
+        if ($response = $this->requireTables(['user_login'])) {
+            return $response;
+        }
+
+        $user = UserLogin::query()->find($id);
+        if (! $user || (int) $user->access !== 1) {
+            return response()->json(['message' => 'Teacher not found.'], 404);
+        }
+
+        return response()->json($this->formatTeacher((object) [
+            'id' => $user->id,
+            'name' => $user->name,
+            'display_name' => $user->name,
+        ]));
+    }
+
+    public function destroy(string $id): JsonResponse
+    {
+        if ($response = $this->requireTables(['user_login'])) {
+            return $response;
+        }
+
+        $user = UserLogin::query()->find($id);
+        if (! $user || (int) $user->access !== 1) {
+            return response()->json(['message' => 'Teacher not found.'], 404);
+        }
+
+        DB::table('user_login')->where('id', $id)->delete();
+
+        return response()->json(['message' => 'Teacher deleted.']);
+    }
+
     public function update(Request $request, string $id): JsonResponse
     {
         if ($response = $this->requireTables(['user_login'])) {

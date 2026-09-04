@@ -40,6 +40,24 @@ class RbacController extends AdminController
         ]);
     }
 
+    public function showUser(string $id): JsonResponse
+    {
+        if ($response = $this->requireTables(['user_roles', 'roles'])) {
+            return $response;
+        }
+
+        $roleIds = DB::table('user_roles')
+            ->where('user_id', $id)
+            ->pluck('role_id')
+            ->values()
+            ->all();
+
+        return response()->json([
+            'user_id' => $id,
+            'role_ids' => array_map('intval', $roleIds),
+        ]);
+    }
+
     public function updateUserRoles(Request $request, string $id): JsonResponse
     {
         if ($response = $this->requireTables(['user_roles', 'roles'])) {

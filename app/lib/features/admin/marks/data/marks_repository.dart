@@ -49,9 +49,9 @@ class MarksEntry {
     return MarksEntry(
       id: '${json['id']}',
       studentName: json['student_name']?.toString() ?? '',
-      subject: json['subject']?.toString() ?? '',
+      subject: json['subject_name']?.toString() ?? json['subject']?.toString() ?? '',
       term: json['term']?.toString() ?? '',
-      score: (json['score'] as num?)?.toDouble() ?? 0,
+      score: (json['marks'] as num?)?.toDouble() ?? (json['score'] as num?)?.toDouble() ?? 0,
     );
   }
 }

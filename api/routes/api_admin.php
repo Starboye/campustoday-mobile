@@ -26,11 +26,15 @@ Route::middleware([JwtAuthenticate::class.':2'])->prefix('admin')->group(functio
     Route::middleware('permission:can_manage_users')->group(function () {
         Route::get('/students', [StudentsController::class, 'index']);
         Route::post('/students', [StudentsController::class, 'store']);
+        Route::get('/students/{id}', [StudentsController::class, 'show']);
         Route::put('/students/{id}', [StudentsController::class, 'update']);
+        Route::delete('/students/{id}', [StudentsController::class, 'destroy']);
 
         Route::get('/teachers', [TeachersController::class, 'index']);
         Route::post('/teachers', [TeachersController::class, 'store']);
+        Route::get('/teachers/{id}', [TeachersController::class, 'show']);
         Route::put('/teachers/{id}', [TeachersController::class, 'update']);
+        Route::delete('/teachers/{id}', [TeachersController::class, 'destroy']);
 
         Route::get('/homework', [HomeworkController::class, 'index']);
         Route::delete('/homework/{id}', [HomeworkController::class, 'destroy']);
@@ -49,11 +53,22 @@ Route::middleware([JwtAuthenticate::class.':2'])->prefix('admin')->group(functio
         Route::get('/attendance/locks', [AttendanceLockController::class, 'index']);
         Route::post('/attendance/locks', [AttendanceLockController::class, 'store']);
         Route::delete('/attendance/locks/{id}', [AttendanceLockController::class, 'destroy']);
+
+        // Flutter client alias (kebab-case)
+        Route::get('/attendance-locks', [AttendanceLockController::class, 'index']);
+        Route::post('/attendance-locks', [AttendanceLockController::class, 'store']);
+        Route::delete('/attendance-locks/{id}', [AttendanceLockController::class, 'destroy']);
     });
 
     Route::middleware('permission:can_edit_marks')->group(function () {
         Route::get('/marks-new', [MarksController::class, 'index']);
+        Route::post('/marks-new', [MarksController::class, 'store']);
         Route::put('/marks-new/{id}', [MarksController::class, 'update']);
+
+        // Flutter client alias
+        Route::get('/marks', [MarksController::class, 'index']);
+        Route::post('/marks', [MarksController::class, 'store']);
+        Route::put('/marks/{id}', [MarksController::class, 'update']);
     });
 
     Route::middleware('permission:can_manage_fees')->group(function () {
@@ -64,6 +79,10 @@ Route::middleware([JwtAuthenticate::class.':2'])->prefix('admin')->group(functio
 
         Route::get('/fees/status', [FeesController::class, 'listStatus']);
         Route::put('/fees/status/{id}', [FeesController::class, 'updateStatus']);
+
+        // Flutter client alias
+        Route::get('/fees/payments', [FeesController::class, 'listStatus']);
+        Route::put('/fees/payments/{id}', [FeesController::class, 'updateStatus']);
     });
 
     Route::middleware('permission:can_manage_planner')->group(function () {
@@ -108,6 +127,7 @@ Route::middleware([JwtAuthenticate::class.':2'])->prefix('admin')->group(functio
 
     Route::middleware('permission:can_manage_delegation')->group(function () {
         Route::get('/rbac/roles', [RbacController::class, 'listRoles']);
+        Route::get('/rbac/users/{id}', [RbacController::class, 'showUser']);
         Route::put('/rbac/users/{id}/roles', [RbacController::class, 'updateUserRoles']);
     });
 

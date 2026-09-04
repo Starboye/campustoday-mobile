@@ -90,6 +90,39 @@ class StudentsController extends AdminController
         return response()->json($this->loadStudent($id), 201);
     }
 
+    public function show(string $id): JsonResponse
+    {
+        if ($response = $this->requireTables(['student_info', 'user_login'])) {
+            return $response;
+        }
+
+        $user = UserLogin::query()->find($id);
+        if (! $user || (int) $user->access !== 0) {
+            return response()->json(['message' => 'Student not found.'], 404);
+        }
+
+        return response()->json($this->loadStudent($id));
+    }
+
+    public function destroy(string $id): JsonResponse
+    {
+        if ($response = $this->requireTables(['student_info', 'user_login'])) {
+            return $response;
+        }
+
+        $user = UserLogin::query()->find($id);
+        if (! $user || (int) $user->access !== 0) {
+            return response()->json(['message' => 'Student not found.'], 404);
+        }
+
+        DB::transaction(function () use ($id) {
+            DB::table('student_info')->where('id', $id)->delete();
+            DB::table('user_login')->where('id', $id)->delete();
+        });
+
+        return response()->json(['message' => 'Student deleted.']);
+    }
+
     public function update(Request $request, string $id): JsonResponse
     {
         if ($response = $this->requireTables(['student_info', 'user_login'])) {

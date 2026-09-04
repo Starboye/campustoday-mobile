@@ -51,6 +51,43 @@ class MarksController extends AdminController
         ]);
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        if ($response = $this->requireTables(['marks_new'])) {
+            return $response;
+        }
+
+        $data = $request->validate([
+            'student_id' => ['required', 'string', 'max:20'],
+            'subject_name' => ['required', 'string', 'max:100'],
+            'marks' => ['required', 'numeric'],
+            'grade' => ['nullable', 'string', 'max:10'],
+            'term' => ['required', 'integer', 'min:1', 'max:3'],
+            'exam_type' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $id = DB::table('marks_new')->insertGetId([
+            'student_id' => $data['student_id'],
+            'subject_name' => $data['subject_name'],
+            'marks' => $data['marks'],
+            'grade' => $data['grade'] ?? null,
+            'term' => $data['term'],
+            'exam_type' => $data['exam_type'] ?? null,
+        ]);
+
+        $row = DB::table('marks_new')->where('id', $id)->first();
+
+        return response()->json([
+            'id' => (int) $row->id,
+            'student_id' => (string) $row->student_id,
+            'subject_name' => $row->subject_name,
+            'marks' => $row->marks,
+            'grade' => $row->grade,
+            'term' => $row->term !== null ? (int) $row->term : null,
+            'exam_type' => $row->exam_type,
+        ], 201);
+    }
+
     public function update(Request $request, int $id): JsonResponse
     {
         if ($response = $this->requireTables(['marks_new'])) {
