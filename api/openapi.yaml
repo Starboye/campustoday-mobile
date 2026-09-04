@@ -1,0 +1,75 @@
+openapi: 3.0.3
+info:
+  title: CampusToday Mobile API
+  version: 1.0.0
+  description: JSON API for CampusToday Flutter app (same MariaDB as SchoolCRM web).
+servers:
+  - url: http://localhost/api/v1
+    description: Local Apache alias
+  - url: http://127.0.0.1:8080/v1
+    description: artisan serve
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password, access]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                access:
+                  type: integer
+                  enum: [0, 1, 2]
+      responses:
+        '200':
+          description: Tokens issued
+        '401':
+          description: Invalid credentials or role
+  /auth/refresh:
+    post:
+      summary: Rotate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+  /me:
+    get:
+      summary: Current user profile
+      security:
+        - bearerAuth: []
+  /student/homework:
+    get:
+      summary: Student homework for date
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

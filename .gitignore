@@ -1,0 +1,16 @@
+# Root ignores
+.DS_Store
+Thumbs.db
+
+# API (Laravel)
+api/vendor/
+api/node_modules/
+api/.env
+api/storage/logs/
+api/database/database.sqlite
+
+# Flutter
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
