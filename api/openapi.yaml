@@ -2,45 +2,82 @@ openapi: 3.0.3
 info:
   title: CampusToday Mobile API
   version: 1.0.0
-  description: JSON API for CampusToday Flutter app (same MariaDB as SchoolCRM web).
+  description: |
+    JSON API for the CampusToday Flutter app (same MariaDB `asimos` as SchoolCRM web).
+
+    **Role access:** `0` = student, `1` = teacher, `2` = admin (must match `user_login.access`).
+
+    Endpoints marked *planned* are documented from route stubs (`api_student.php`, `api_teacher.php`, `api_admin.php`)
+    and `ROADMAP.md`; controllers may not exist yet.
 servers:
   - url: http://localhost/api/v1
     description: Local Apache alias
   - url: http://127.0.0.1:8080/v1
     description: artisan serve
+tags:
+  - name: Health
+  - name: Auth
+  - name: Me
+  - name: Student
+  - name: Teacher
+  - name: Admin
 paths:
   /health:
     get:
+      tags: [Health]
       summary: Health check
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
   /auth/login:
     post:
-      summary: Login
+      tags: [Auth]
+      summary: Login with username, password, and portal access level
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [username, password, access]
-              properties:
-                username:
-                  type: string
-                password:
-                  type: string
-                access:
-                  type: integer
-                  enum: [0, 1, 2]
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
           description: Tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
         '401':
-          description: Invalid credentials or role
+          description: Invalid credentials or role mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          description: Account locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '429':
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
   /auth/refresh:
     post:
-      summary: Rotate refresh token
+      tags: [Auth]
+      summary: Rotate refresh token and issue new access token
       requestBody:
         required: true
         content:
@@ -51,14 +88,467 @@ paths:
               properties:
                 refresh_token:
                   type: string
+      responses:
+        '200':
+          description: Tokens rotated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke refresh token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password for authenticated user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 6
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Current password incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
   /me:
     get:
+      tags: [Me]
       summary: Current user profile
       security:
         - bearerAuth: []
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /me/device:
+    put:
+      tags: [Me]
+      summary: Register or update FCM device token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [platform]
+              properties:
+                platform:
+                  type: string
+                  enum: [ios, android]
+                fcm_token:
+                  type: string
+                  maxLength: 512
+                  nullable: true
+      responses:
+        '200':
+          description: Device updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
   /student/homework:
     get:
-      summary: Student homework for date
+      tags: [Student]
+      summary: Homework list for the logged-in student
+      description: Implemented — `GET /student/homework` in `api_student.php`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          description: ISO date (defaults to today)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Homework items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeworkListResponse'
+        '422':
+          description: Invalid date format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /student/dashboard:
+    get:
+      tags: [Student]
+      summary: Student dashboard summary
+      description: '*Planned* — route stub in `api_student.php`.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard widgets and counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  announcements_unread:
+                    type: integer
+                  homework_today:
+                    type: integer
+                  next_class:
+                    type: object
+                    nullable: true
+
+  /student/announcements:
+    get:
+      tags: [Student]
+      summary: List announcements for the student
+      description: '*Planned* — route stub in `api_student.php`.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Announcement list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Announcement'
+
+  /student/announcements/{id}/read:
+    post:
+      tags: [Student]
+      summary: Mark announcement as read
+      description: '*Planned* — route stub in `api_student.php`.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /student/timetable:
+    get:
+      tags: [Student]
+      summary: Approved class timetable
+      description: '*Planned* — approved entries only (`ROADMAP.md` Phase 1).'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: week_start
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Timetable slots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  week_start:
+                    type: string
+                    format: date
+                  slots:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TimetableSlot'
+
+  /student/fees:
+    get:
+      tags: [Student]
+      summary: Fee ledger (read-only)
+      description: '*Planned* — route stub in `api_student.php`.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Fee summary and line items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: number
+                    format: float
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        label:
+                          type: string
+                        amount:
+                          type: number
+                        due_date:
+                          type: string
+                          format: date
+                          nullable: true
+
+  /student/report-card:
+    get:
+      tags: [Student]
+      summary: Report card JSON
+      description: '*Planned* — route stub in `api_student.php`.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report card data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  term:
+                    type: string
+                  subjects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        grade:
+                          type: string
+                        marks:
+                          type: number
+
+  /student/report-card/pdf:
+    get:
+      tags: [Student]
+      summary: Download report card PDF
+      description: '*Planned* — generated server-side with Dompdf (`ROADMAP.md` Phase 1).'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PDF document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /teacher/dashboard:
+    get:
+      tags: [Teacher]
+      summary: Teacher dashboard summary
+      description: '*Planned* — route stub in `api_teacher.php`.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard data
+
+  /teacher/allocations:
+    get:
+      tags: [Teacher]
+      summary: Class and subject allocations for the teacher
+      description: '*Planned* — route stub in `api_teacher.php`.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Allocation list
+
+  /teacher/attendance:
+    get:
+      tags: [Teacher]
+      summary: Attendance sheet for a class/date
+      description: '*Planned* — day-lock checks (`ROADMAP.md` Phase 2).'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: standard
+          in: query
+          schema:
+            type: integer
+        - name: section
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attendance rows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  locked:
+                    type: boolean
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        student_id:
+                          type: string
+                        status:
+                          type: string
+                          enum: [present, absent, late, excused]
+    put:
+      tags: [Teacher]
+      summary: Save attendance for a class/date
+      description: '*Planned* — rejects when day is locked.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, standard, section, rows]
+              properties:
+                date:
+                  type: string
+                  format: date
+                standard:
+                  type: integer
+                section:
+                  type: string
+                rows:
+                  type: array
+                  items:
+                    type: object
+                    required: [student_id, status]
+                    properties:
+                      student_id:
+                        type: string
+                      status:
+                        type: string
+                        enum: [present, absent, late, excused]
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '423':
+          description: Day locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /teacher/homework:
+    get:
+      tags: [Teacher]
+      summary: List homework created by the teacher
+      description: '*Planned* — homework CRUD (`ROADMAP.md` Phase 2).'
+      x-planned: true
       security:
         - bearerAuth: []
       parameters:
@@ -67,9 +557,681 @@ paths:
           schema:
             type: string
             format: date
+      responses:
+        '200':
+          description: Homework list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeworkListResponse'
+    post:
+      tags: [Teacher]
+      summary: Create homework
+      x-planned: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HomeworkWriteRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+
+  /teacher/homework/{id}:
+    put:
+      tags: [Teacher]
+      summary: Update homework
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HomeworkWriteRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+    delete:
+      tags: [Teacher]
+      summary: Delete homework
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /teacher/marks:
+    get:
+      tags: [Teacher]
+      summary: Marks for an assessment
+      description: '*Planned* — `marks` table (`ROADMAP.md` Phase 2).'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assessment_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Marks grid
+    post:
+      tags: [Teacher]
+      summary: Save marks for an assessment
+      x-planned: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assessment_id, entries]
+              properties:
+                assessment_id:
+                  type: integer
+                entries:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      student_id:
+                        type: string
+                      score:
+                        type: number
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /teacher/announcements:
+    post:
+      tags: [Teacher]
+      summary: Post announcement to classes
+      description: '*Planned* — `ROADMAP.md` Phase 2.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body, targets]
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                targets:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      standard:
+                        type: integer
+                      section:
+                        type: string
+      responses:
+        '201':
+          description: Created
+
+  /teacher/students/{id}:
+    get:
+      tags: [Teacher]
+      summary: Student dossier (scoped to teacher allocations)
+      description: '*Planned* — `ROADMAP.md` Phase 2.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Student profile and recent activity
+
+  /teacher/timetables:
+    get:
+      tags: [Teacher]
+      summary: Timetable drafts and approved versions
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Timetable list
+
+  /teacher/timetables/draft:
+    post:
+      tags: [Teacher]
+      summary: Save timetable draft
+      x-planned: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                slots:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TimetableSlot'
+      responses:
+        '200':
+          description: Draft saved
+
+  /teacher/timetables/submit:
+    post:
+      tags: [Teacher]
+      summary: Submit timetable for admin approval
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Submitted for approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Admin dashboard KPIs
+      description: '*Planned* — route stub in `api_admin.php`.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard metrics
+
+  /admin/students:
+    get:
+      tags: [Admin]
+      summary: List students
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: standard
+          in: query
+          schema:
+            type: integer
+        - name: section
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated student list
+
+  /admin/students/{id}:
+    get:
+      tags: [Admin]
+      summary: Student detail
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Student record
+
+  /admin/teachers:
+    get:
+      tags: [Admin]
+      summary: List teachers
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Teacher list
+
+  /admin/attendance:
+    get:
+      tags: [Admin]
+      summary: School-wide attendance overview
+      x-planned: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Attendance summary
+
+  /admin/attendance/locks:
+    put:
+      tags: [Admin]
+      summary: Lock or unlock attendance for a date/class
+      x-planned: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, locked]
+              properties:
+                date:
+                  type: string
+                  format: date
+                standard:
+                  type: integer
+                section:
+                  type: string
+                locked:
+                  type: boolean
+      responses:
+        '200':
+          description: Lock state updated
+
+  /admin/homework:
+    get:
+      tags: [Admin]
+      summary: Homework oversight list
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Homework list
+
+  /admin/fees:
+    get:
+      tags: [Admin]
+      summary: Fees administration
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Fees data
+
+  /admin/marks:
+    get:
+      tags: [Admin]
+      summary: Marks administration (`marks_new`)
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Marks data
+
+  /admin/approvals:
+    get:
+      tags: [Admin]
+      summary: Pending approvals (timetables, etc.)
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Approval queue
+    post:
+      tags: [Admin]
+      summary: Approve or reject an item
+      x-planned: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, action]
+              properties:
+                id:
+                  type: integer
+                action:
+                  type: string
+                  enum: [approve, reject]
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Decision recorded
+
+  /admin/notifications:
+    get:
+      tags: [Admin]
+      summary: Notification log and templates
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Notifications
+
+  /admin/planner:
+    get:
+      tags: [Admin]
+      summary: Academic planner (tablet-first UI backing API)
+      description: '*Planned* — `ROADMAP.md` Phase 4.'
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Planner data
+
+  /admin/exams:
+    get:
+      tags: [Admin]
+      summary: Exam schedule and configuration
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Exams
+
+  /admin/analytics:
+    get:
+      tags: [Admin]
+      summary: Analytics aggregates
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Analytics
+
+  /admin/security:
+    get:
+      tags: [Admin]
+      summary: Security settings and audit
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Security config
+
+  /admin/rbac:
+    get:
+      tags: [Admin]
+      summary: Roles and permissions matrix
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: RBAC matrix
+
+  /admin/delegation:
+    get:
+      tags: [Admin]
+      summary: Delegated admin permissions
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Delegation rules
+
+  /admin/bulk:
+    post:
+      tags: [Admin]
+      summary: Bulk import or export operations
+      x-planned: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                operation:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '202':
+          description: Bulk job accepted
+
+  /admin/data-quality:
+    get:
+      tags: [Admin]
+      summary: Data quality checks and anomalies
+      x-planned: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Quality report
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    LoginRequest:
+      type: object
+      required: [username, password, access]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        access:
+          type: integer
+          enum: [0, 1, 2]
+          description: '0=student, 1=teacher, 2=admin'
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        access:
+          type: integer
+          enum: [0, 1, 2]
+        permissions:
+          type: array
+          items:
+            type: string
+        force_password_reset:
+          type: boolean
+    AuthTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+        user:
+          $ref: '#/components/schemas/AuthUser'
+    MeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        access:
+          type: integer
+        permissions:
+          type: array
+          items:
+            type: string
+        profile:
+          type: object
+          nullable: true
+          properties:
+            standard:
+              type: integer
+            section:
+              type: string
+            name:
+              type: string
+    HomeworkItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject_name:
+          type: string
+        teacher_id:
+          type: string
+        teacher_name:
+          type: string
+          nullable: true
+        standard:
+          type: integer
+        section:
+          type: string
+        date:
+          type: string
+          format: date
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        target_type:
+          type: string
+          nullable: true
+        student_id:
+          type: string
+          nullable: true
+    HomeworkListResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/HomeworkItem'
+    HomeworkWriteRequest:
+      type: object
+      required: [standard, section, date, subject_name, title]
+      properties:
+        standard:
+          type: integer
+        section:
+          type: string
+        date:
+          type: string
+          format: date
+        subject_name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        target_type:
+          type: string
+        student_id:
+          type: string
+          nullable: true
+    Announcement:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        read:
+          type: boolean
+    TimetableSlot:
+      type: object
+      properties:
+        day:
+          type: integer
+          minimum: 0
+          maximum: 6
+        period:
+          type: integer
+        subject_name:
+          type: string
+        teacher_name:
+          type: string
+        room:
+          type: string
