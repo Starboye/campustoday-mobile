@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Student\Concerns\InteractsWithStudentSchema;
 use App\Models\StudentInfo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
+    use InteractsWithStudentSchema;
+
     public function show(Request $request): JsonResponse
     {
         $auth = $request->attributes->get('auth_user');
@@ -20,30 +23,24 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Student profile not found.'], 404);
         }
 
-        $standard = $student->standard;
-        $section = $student->section;
         $monthStart = now()->startOfMonth()->toDateString();
         $monthEnd = now()->endOfMonth()->toDateString();
 
-        $attendance = ['present' => 0, 'absent' => 0, 'total_days' => 0];
+        $attendance = ['present' => 0, 'absent' => 0];
         if (Schema::hasTable('attendance')) {
             $rows = DB::table('attendance')
-                ->where('student_id', $auth['id'])
+                ->where('id', $auth['id'])
                 ->whereBetween('date', [$monthStart, $monthEnd])
-                ->get(['morning', 'afternoon', 'evening']);
+                ->get(['status']);
 
             foreach ($rows as $row) {
-                foreach (['morning', 'afternoon', 'evening'] as $session) {
-                    $status = $row->{$session} ?? null;
-                    if ($status === null || $status === '') {
-                        continue;
-                    }
-                    $attendance['total_days']++;
-                    if (in_array(strtolower((string) $status), ['present', 'p', '1'], true)) {
-                        $attendance['present']++;
-                    } elseif (in_array(strtolower((string) $status), ['absent', 'a', '0'], true)) {
-                        $attendance['absent']++;
-                    }
+                if ($row->status === null) {
+                    continue;
+                }
+                if ((int) $row->status === 0) {
+                    $attendance['absent']++;
+                } else {
+                    $attendance['present']++;
                 }
             }
         }
@@ -51,54 +48,51 @@ class DashboardController extends Controller
         $unreadCount = 0;
         if (Schema::hasTable('notification')) {
             $query = DB::table('notification');
-            $this->scopeNotifications($query, $auth['id'], $standard, $section);
-            if (Schema::hasColumn('notification', 'is_read')) {
-                $query->where('is_read', 0);
+            $this->scopeNotifications($query, $auth['id'], $student->standard, $student->section);
+            $readIds = $this->notificationReadIdsForStudent($auth['id']);
+
+            foreach ($query->get() as $row) {
+                if (! $this->notificationIsRead($row, $auth['id'], $readIds)) {
+                    $unreadCount++;
+                }
             }
-            $unreadCount = $query->count();
         }
 
         $latestMarks = [];
         if (Schema::hasTable('marks_new')) {
-            $latestMarks = DB::table('marks_new')
-                ->where('student_id', $auth['id'])
-                ->orderByDesc('id')
-                ->limit(5)
-                ->get(['subject_name', 'marks', 'term', 'exam_type'])
-                ->map(fn ($row) => [
-                    'subject_name' => $row->subject_name,
-                    'marks' => $row->marks,
-                    'term' => $row->term,
-                    'exam_type' => $row->exam_type ?? null,
-                ])
-                ->values()
-                ->all();
+            $labels = $this->reportCardSubjectLabels();
+            $rows = DB::table('marks_new')
+                ->where('id', $auth['id'])
+                ->orderByDesc('date')
+                ->orderByDesc('testName')
+                ->limit(3)
+                ->get();
+
+            foreach ($rows as $row) {
+                foreach ($this->reportCardSubjects() as $subject) {
+                    $latestMarks[] = [
+                        'term' => (string) $row->testName,
+                        'subject_name' => $labels[$subject],
+                        'marks' => (int) ($row->{$subject} ?? 0),
+                        'max_marks' => (int) ($row->totalMarks ?? 100),
+                        'date' => (string) ($row->date ?? ''),
+                    ];
+                }
+            }
+
+            $latestMarks = array_slice($latestMarks, 0, 5);
         }
 
         return response()->json([
             'profile' => [
                 'id' => (string) $auth['id'],
-                'name' => $student->name ?? $auth['name'],
-                'standard' => $standard,
-                'section' => $section,
+                'name' => (string) ($student->name ?? $auth['name']),
+                'standard' => $student->standard,
+                'section' => $student->section,
             ],
             'attendance_summary' => $attendance,
             'unread_notifications' => $unreadCount,
             'latest_marks' => $latestMarks,
         ]);
-    }
-
-    private function scopeNotifications($query, string $studentId, $standard, $section): void
-    {
-        $classKey = ($standard !== null && $section !== null)
-            ? 'CLASS_'.$standard.'_'.$section
-            : null;
-
-        $query->where(function ($q) use ($studentId, $classKey) {
-            $q->where('id', $studentId)->orWhere('id', 'ALL');
-            if ($classKey) {
-                $q->orWhere('id', $classKey);
-            }
-        });
     }
 }

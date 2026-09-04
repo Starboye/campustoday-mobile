@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Student\Concerns\InteractsWithStudentSchema;
 use App\Models\StudentInfo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,51 +12,50 @@ use Illuminate\Support\Facades\Schema;
 
 class TimetableController extends Controller
 {
+    use InteractsWithStudentSchema;
+
     public function show(Request $request): JsonResponse
     {
         $auth = $request->attributes->get('auth_user');
         $student = StudentInfo::query()->find($auth['id']);
 
         if (! $student || $student->standard === null || $student->section === null) {
-            return response()->json(['status' => 'unavailable', 'items' => []]);
+            return response()->json(['status' => 'pending', 'items' => []]);
         }
 
         if (! Schema::hasTable('class_timetables')) {
-            return response()->json(['code' => 'schema_missing'], 501);
+            return $this->schemaMissingResponse();
         }
+
+        $academicYear = $this->currentAcademicYear();
 
         $timetable = DB::table('class_timetables')
             ->where('standard', $student->standard)
             ->where('section', $student->section)
-            ->orderByDesc('id')
+            ->where('academic_year', $academicYear)
             ->first();
 
         if (! $timetable || ($timetable->status ?? '') !== 'approved') {
             return response()->json([
                 'status' => $timetable->status ?? 'pending',
                 'items' => [],
-                'message' => 'Timetable is not yet approved.',
             ]);
         }
 
         $items = [];
-        if (Schema::hasTable('assignments') && Schema::hasTable('slots')) {
-            $items = DB::table('assignments as a')
-                ->join('slots as s', 's.id', '=', 'a.slot_id')
-                ->where('a.timetable_id', $timetable->id)
-                ->orderBy('s.day')
-                ->orderBy('s.period')
-                ->get([
-                    's.day', 's.period', 's.start_time', 's.end_time',
-                    'a.subject_name', 'a.teacher_id',
-                ])
+        if (Schema::hasTable('timetable_slots')) {
+            $items = DB::table('timetable_slots')
+                ->where('standard', $student->standard)
+                ->where('section', $student->section)
+                ->orderBy('period_no')
+                ->orderBy('day_of_week')
+                ->get(['day_of_week', 'period_no', 'subject_name', 'teacher_id'])
                 ->map(fn ($row) => [
-                    'day' => $row->day,
-                    'period' => (int) $row->period,
-                    'start_time' => $row->start_time,
-                    'end_time' => $row->end_time,
-                    'subject_name' => $row->subject_name,
-                    'teacher_id' => (string) $row->teacher_id,
+                    'day_of_week' => (int) $row->day_of_week,
+                    'day' => $this->dayLabel((int) $row->day_of_week),
+                    'period_no' => (int) $row->period_no,
+                    'subject_name' => (string) $row->subject_name,
+                    'teacher_id' => (string) ($row->teacher_id ?? ''),
                 ])
                 ->values()
                 ->all();
@@ -63,8 +63,20 @@ class TimetableController extends Controller
 
         return response()->json([
             'status' => 'approved',
-            'timetable_id' => (int) $timetable->id,
+            'academic_year' => $academicYear,
             'items' => $items,
         ]);
+    }
+
+    private function dayLabel(int $dayOfWeek): string
+    {
+        return match ($dayOfWeek) {
+            1 => 'Monday',
+            2 => 'Tuesday',
+            3 => 'Wednesday',
+            4 => 'Thursday',
+            5 => 'Friday',
+            default => 'Day '.$dayOfWeek,
+        };
     }
 }
