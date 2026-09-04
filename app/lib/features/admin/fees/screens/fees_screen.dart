@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/admin_permissions.dart';
 import '../../core/permission.dart';
+import '../../core/widgets/admin_edit_sheet.dart';
 import '../../core/widgets/admin_states.dart';
 import '../../../auth/providers/auth_controller.dart';
+import '../data/fees_repository.dart';
 import '../providers/fees_providers.dart';
 
 class FeesScreen extends ConsumerWidget {
@@ -28,6 +30,13 @@ class FeesScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Fees'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Add structure',
+              onPressed: () => _addStructure(context, ref),
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Structures'),
@@ -46,9 +55,28 @@ class FeesScreen extends ConsumerWidget {
               data: (items) => _buildList(
                 items,
                 (item) => ListTile(
-                  title: Text(item.name),
+                  title: Text(item.name.isEmpty ? item.term : item.name),
                   subtitle: Text(item.term),
-                  trailing: Text(item.amount.toStringAsFixed(2)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(item.amount.toStringAsFixed(2)),
+                      PopupMenuButton<String>(
+                        onSelected: (action) async {
+                          if (action == 'edit') {
+                            await _editStructure(context, ref, item);
+                          } else if (action == 'delete') {
+                            await ref.read(feesRepositoryProvider).deleteStructure(item.id);
+                            ref.invalidate(feeStructuresProvider);
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Edit')),
+                          PopupMenuItem(value: 'delete', child: Text('Delete')),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
                 'No fee structures.',
                 () => ref.invalidate(feeStructuresProvider),
@@ -65,7 +93,16 @@ class FeesScreen extends ConsumerWidget {
                 (item) => ListTile(
                   title: Text(item.studentName),
                   subtitle: Text(item.status),
-                  trailing: Text(item.amount.toStringAsFixed(2)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(item.amount.toStringAsFixed(2)),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () => _editPayment(context, ref, item),
+                      ),
+                    ],
+                  ),
                 ),
                 'No payments found.',
                 () => ref.invalidate(feePaymentsProvider),
@@ -75,6 +112,88 @@ class FeesScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _addStructure(BuildContext context, WidgetRef ref) async {
+    final term = TextEditingController();
+    final amount = TextEditingController();
+    final description = TextEditingController();
+
+    await showAdminEditSheet(
+      context: context,
+      title: 'Add fee structure',
+      fields: [
+        TextField(controller: term, decoration: const InputDecoration(labelText: 'Term')),
+        TextField(controller: amount, decoration: const InputDecoration(labelText: 'Amount'), keyboardType: TextInputType.number),
+        TextField(controller: description, decoration: const InputDecoration(labelText: 'Description')),
+      ],
+      onSave: () async {
+        await ref.read(feesRepositoryProvider).createStructure(
+              term: term.text.trim(),
+              amount: double.tryParse(amount.text.trim()) ?? 0,
+              description: description.text.trim().isEmpty ? null : description.text.trim(),
+            );
+        ref.invalidate(feeStructuresProvider);
+      },
+    );
+
+    term.dispose();
+    amount.dispose();
+    description.dispose();
+  }
+
+  Future<void> _editStructure(BuildContext context, WidgetRef ref, FeeStructure item) async {
+    final term = TextEditingController(text: item.term);
+    final amount = TextEditingController(text: item.amount.toString());
+    final description = TextEditingController(text: item.name);
+
+    await showAdminEditSheet(
+      context: context,
+      title: 'Edit fee structure',
+      fields: [
+        TextField(controller: term, decoration: const InputDecoration(labelText: 'Term')),
+        TextField(controller: amount, decoration: const InputDecoration(labelText: 'Amount'), keyboardType: TextInputType.number),
+        TextField(controller: description, decoration: const InputDecoration(labelText: 'Description')),
+      ],
+      onSave: () async {
+        await ref.read(feesRepositoryProvider).updateStructure(
+              item.id,
+              term: term.text.trim(),
+              amount: double.tryParse(amount.text.trim()),
+              description: description.text.trim(),
+            );
+        ref.invalidate(feeStructuresProvider);
+      },
+    );
+
+    term.dispose();
+    amount.dispose();
+    description.dispose();
+  }
+
+  Future<void> _editPayment(BuildContext context, WidgetRef ref, FeePayment item) async {
+    final status = TextEditingController(text: item.status);
+    final amountPaid = TextEditingController(text: item.amount.toString());
+
+    await showAdminEditSheet(
+      context: context,
+      title: 'Update payment',
+      fields: [
+        TextField(controller: status, decoration: const InputDecoration(labelText: 'Status (paid/unpaid/partial)')),
+        TextField(controller: amountPaid, decoration: const InputDecoration(labelText: 'Amount paid'), keyboardType: TextInputType.number),
+      ],
+      onSave: () async {
+        await ref.read(feesRepositoryProvider).updatePayment(
+              item.id,
+              status: status.text.trim(),
+              amountPaid: double.tryParse(amountPaid.text.trim()),
+            );
+        ref.invalidate(feePaymentsProvider);
+      },
+    );
+
+    status.dispose();
+    amountPaid.dispose();
   }
 
   Widget _buildList<T>(

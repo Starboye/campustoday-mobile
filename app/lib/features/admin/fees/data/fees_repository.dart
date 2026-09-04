@@ -18,12 +18,64 @@ class FeesRepository {
     return parseListData(data).map(FeeStructure.fromJson).toList();
   }
 
+  Future<FeeStructure> createStructure({
+    required String term,
+    required double amount,
+    String? description,
+  }) async {
+    final data = await _dio.adminPost<dynamic>(
+      '/admin/fees/structures',
+      data: {
+        'term': term,
+        'amount': amount,
+        if (description != null) 'description': description,
+      },
+    );
+    return FeeStructure.fromJson(parseItemData(data));
+  }
+
+  Future<FeeStructure> updateStructure(
+    String id, {
+    String? term,
+    double? amount,
+    String? description,
+  }) async {
+    final data = await _dio.adminPut<dynamic>(
+      '/admin/fees/structures/$id',
+      data: {
+        if (term != null) 'term': term,
+        if (amount != null) 'amount': amount,
+        if (description != null) 'description': description,
+      },
+    );
+    return FeeStructure.fromJson(parseItemData(data));
+  }
+
+  Future<void> deleteStructure(String id) async {
+    await _dio.adminDelete('/admin/fees/structures/$id');
+  }
+
   Future<List<FeePayment>> listPayments({String? status}) async {
     final data = await _dio.adminGet<dynamic>(
       '/admin/fees/payments',
       queryParameters: status != null ? {'status': status} : null,
     );
     return parseListData(data).map(FeePayment.fromJson).toList();
+  }
+
+  Future<FeePayment> updatePayment(
+    String id, {
+    String? status,
+    double? amountPaid,
+  }) async {
+    final data = await _dio.adminPut<dynamic>(
+      '/admin/fees/payments/$id',
+      data: {
+        if (status != null) 'status': status,
+        if (amountPaid != null) 'amount_paid': amountPaid,
+      },
+    );
+    return FeePayment.fromJson(parseItemData(data));
   }
 }
 
@@ -38,7 +90,7 @@ class FeeStructure {
   factory FeeStructure.fromJson(Map<String, dynamic> json) {
     return FeeStructure(
       id: '${json['id']}',
-      name: json['name']?.toString() ?? '',
+      name: json['description']?.toString() ?? json['name']?.toString() ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       term: json['term']?.toString() ?? '',
     );
@@ -62,7 +114,7 @@ class FeePayment {
     return FeePayment(
       id: '${json['id']}',
       studentName: json['student_name']?.toString() ?? '',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      amount: (json['amount_paid'] as num?)?.toDouble() ?? (json['amount'] as num?)?.toDouble() ?? 0,
       status: json['status']?.toString() ?? '',
     );
   }

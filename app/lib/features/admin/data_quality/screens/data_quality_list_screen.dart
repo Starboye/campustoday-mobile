@@ -75,6 +75,7 @@ class DataQualityListScreen extends ConsumerWidget {
                             ],
                           )
                         : null,
+                    onTap: () => _showDetail(context, ref, item),
                   ),
                 );
               },
@@ -106,5 +107,50 @@ class DataQualityListScreen extends ConsumerWidget {
         );
       }
     }
+  }
+
+  void _showDetail(BuildContext context, WidgetRef ref, DataQualityIssue item) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(item.issue, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text('Entity: ${item.entityType ?? '—'} ${item.entityId ?? ''}'),
+            Text('Status: ${item.status}'),
+            if (item.status == 'open') ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _updateStatus(context, ref, item, 'ignored');
+                      },
+                      child: const Text('Ignore'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _updateStatus(context, ref, item, 'resolved');
+                      },
+                      child: const Text('Resolve'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

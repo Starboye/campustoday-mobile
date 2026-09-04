@@ -72,6 +72,12 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
                   )
                 : const Text('Upload'),
           ),
+          if (_uploading) ...[
+            const SizedBox(height: 16),
+            const LinearProgressIndicator(),
+            const SizedBox(height: 8),
+            const Text('Uploading and processing…'),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 16),
             Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),

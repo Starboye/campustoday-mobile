@@ -7,8 +7,8 @@ info:
 
     **Role access:** `0` = student, `1` = teacher, `2` = admin (must match `user_login.access`).
 
-    Endpoints marked *planned* in OpenAPI may still be awaiting route registration in
-    `api_admin.php` even when controllers and Flutter screens exist (see `ROADMAP.md`).
+    All routes in `api_admin.php`, `api_teacher.php`, and `api_student.php` are registered.
+    Flutter clients may use kebab-case aliases: `/admin/marks`, `/admin/attendance-locks`, `/admin/fees/payments`.
 servers:
   - url: http://localhost/api/v1
     description: Local Apache alias
@@ -426,8 +426,8 @@ paths:
     get:
       tags: [Teacher]
       summary: Teacher dashboard summary
-      description: '*Planned* — route stub in `api_teacher.php`.'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       responses:
@@ -438,8 +438,8 @@ paths:
     get:
       tags: [Teacher]
       summary: Class and subject allocations for the teacher
-      description: '*Planned* — route stub in `api_teacher.php`.'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       responses:
@@ -450,8 +450,8 @@ paths:
     get:
       tags: [Teacher]
       summary: Attendance sheet for a class/date
-      description: '*Planned* — day-lock checks (`ROADMAP.md` Phase 2).'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       parameters:
@@ -461,12 +461,14 @@ paths:
           schema:
             type: string
             format: date
-        - name: standard
+        - name: class
           in: query
+          required: true
           schema:
             type: integer
         - name: section
           in: query
+          required: true
           schema:
             type: string
       responses:
@@ -477,23 +479,32 @@ paths:
               schema:
                 type: object
                 properties:
-                  locked:
-                    type: boolean
-                  rows:
+                  date:
+                    type: string
+                  standard:
+                    type: integer
+                  section:
+                    type: string
+                  items:
                     type: array
                     items:
                       type: object
                       properties:
                         student_id:
                           type: string
-                        status:
+                        name:
                           type: string
-                          enum: [present, absent, late, excused]
+                        morning:
+                          type: string
+                        afternoon:
+                          type: string
+                        evening:
+                          type: string
     put:
       tags: [Teacher]
-      summary: Save attendance for a class/date
-      description: '*Planned* — rejects when day is locked.'
-      x-planned: true
+      summary: Save attendance for one student/session
+      description: 'Rejects with 403 when day is locked.'
+      
       security:
         - bearerAuth: []
       requestBody:
@@ -502,46 +513,30 @@ paths:
           application/json:
             schema:
               type: object
-              required: [date, standard, section, rows]
+              required: [student_id, date, session, status]
               properties:
+                student_id:
+                  type: string
                 date:
                   type: string
                   format: date
-                standard:
-                  type: integer
-                section:
+                session:
                   type: string
-                rows:
-                  type: array
-                  items:
-                    type: object
-                    required: [student_id, status]
-                    properties:
-                      student_id:
-                        type: string
-                      status:
-                        type: string
-                        enum: [present, absent, late, excused]
+                  enum: [morning, afternoon, evening]
+                status:
+                  type: string
       responses:
         '200':
           description: Saved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageResponse'
-        '423':
-          description: Day locked
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          description: Day locked or not allocated
 
   /teacher/homework:
     get:
       tags: [Teacher]
       summary: List homework created by the teacher
-      description: '*Planned* — homework CRUD (`ROADMAP.md` Phase 2).'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       parameters:
@@ -560,7 +555,7 @@ paths:
     post:
       tags: [Teacher]
       summary: Create homework
-      x-planned: true
+      
       security:
         - bearerAuth: []
       requestBody:
@@ -584,7 +579,7 @@ paths:
     put:
       tags: [Teacher]
       summary: Update homework
-      x-planned: true
+      
       security:
         - bearerAuth: []
       parameters:
@@ -609,7 +604,7 @@ paths:
     delete:
       tags: [Teacher]
       summary: Delete homework
-      x-planned: true
+      
       security:
         - bearerAuth: []
       parameters:
@@ -630,8 +625,8 @@ paths:
     get:
       tags: [Teacher]
       summary: Marks for an assessment
-      description: '*Planned* — `marks` table (`ROADMAP.md` Phase 2).'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       parameters:
@@ -645,7 +640,7 @@ paths:
     post:
       tags: [Teacher]
       summary: Save marks for an assessment
-      x-planned: true
+      
       security:
         - bearerAuth: []
       requestBody:
@@ -679,8 +674,8 @@ paths:
     post:
       tags: [Teacher]
       summary: Post announcement to classes
-      description: '*Planned* — `ROADMAP.md` Phase 2.'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       requestBody:
@@ -712,8 +707,8 @@ paths:
     get:
       tags: [Teacher]
       summary: Student dossier (scoped to teacher allocations)
-      description: '*Planned* — `ROADMAP.md` Phase 2.'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       parameters:
@@ -730,7 +725,7 @@ paths:
     get:
       tags: [Teacher]
       summary: Timetable drafts and approved versions
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -741,7 +736,7 @@ paths:
     post:
       tags: [Teacher]
       summary: Save timetable draft
-      x-planned: true
+      
       security:
         - bearerAuth: []
       requestBody:
@@ -763,7 +758,7 @@ paths:
     post:
       tags: [Teacher]
       summary: Submit timetable for admin approval
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -778,8 +773,8 @@ paths:
     get:
       tags: [Admin]
       summary: Admin dashboard KPIs
-      description: '*Planned* — route stub in `api_admin.php`.'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       responses:
@@ -790,7 +785,7 @@ paths:
     get:
       tags: [Admin]
       summary: List students
-      x-planned: true
+      
       security:
         - bearerAuth: []
       parameters:
@@ -814,7 +809,7 @@ paths:
     get:
       tags: [Admin]
       summary: Student detail
-      x-planned: true
+      
       security:
         - bearerAuth: []
       parameters:
@@ -831,7 +826,7 @@ paths:
     get:
       tags: [Admin]
       summary: List teachers
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -842,7 +837,7 @@ paths:
     get:
       tags: [Admin]
       summary: School-wide attendance overview
-      x-planned: true
+      
       security:
         - bearerAuth: []
       parameters:
@@ -859,7 +854,7 @@ paths:
     put:
       tags: [Admin]
       summary: Lock or unlock attendance for a date/class
-      x-planned: true
+      
       security:
         - bearerAuth: []
       requestBody:
@@ -887,7 +882,7 @@ paths:
     get:
       tags: [Admin]
       summary: Homework oversight list
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -898,7 +893,7 @@ paths:
     get:
       tags: [Admin]
       summary: Fees administration
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -908,19 +903,100 @@ paths:
   /admin/marks:
     get:
       tags: [Admin]
-      summary: Marks administration (`marks_new`)
-      x-planned: true
+      summary: Marks administration (`marks_new`) — alias of `/admin/marks-new`
       security:
         - bearerAuth: []
       responses:
         '200':
           description: Marks data
+    post:
+      tags: [Admin]
+      summary: Create marks entry
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /admin/marks/{id}:
+    put:
+      tags: [Admin]
+      summary: Update marks entry
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /admin/attendance-locks:
+    get:
+      tags: [Admin]
+      summary: Attendance day locks (Flutter alias of `/admin/attendance/locks`)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lock list
+    post:
+      tags: [Admin]
+      summary: Create attendance lock
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /admin/fees/payments:
+    get:
+      tags: [Admin]
+      summary: Student fee payment status (Flutter alias of `/admin/fees/status`)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Payment status list
+    put:
+      tags: [Admin]
+      summary: Update payment status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /admin/fees/payments/{id}:
+    put:
+      tags: [Admin]
+      summary: Update payment status by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
 
   /admin/approvals:
     get:
       tags: [Admin]
       summary: Pending approvals (timetables, etc.)
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -929,7 +1005,7 @@ paths:
     post:
       tags: [Admin]
       summary: Approve or reject an item
-      x-planned: true
+      
       security:
         - bearerAuth: []
       requestBody:
@@ -955,7 +1031,7 @@ paths:
     get:
       tags: [Admin]
       summary: Notification log and templates
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -966,8 +1042,8 @@ paths:
     get:
       tags: [Admin]
       summary: Academic planner (tablet-first UI backing API)
-      description: '*Planned* — `ROADMAP.md` Phase 4.'
-      x-planned: true
+      description: 'Implemented.'
+      
       security:
         - bearerAuth: []
       responses:
@@ -978,7 +1054,7 @@ paths:
     get:
       tags: [Admin]
       summary: Exam schedule and configuration
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -989,7 +1065,7 @@ paths:
     get:
       tags: [Admin]
       summary: Analytics aggregates
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -1000,7 +1076,7 @@ paths:
     get:
       tags: [Admin]
       summary: Security settings and audit
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -1011,7 +1087,7 @@ paths:
     get:
       tags: [Admin]
       summary: Roles and permissions matrix
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -1022,7 +1098,7 @@ paths:
     get:
       tags: [Admin]
       summary: Delegated admin permissions
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:
@@ -1033,7 +1109,7 @@ paths:
     post:
       tags: [Admin]
       summary: Bulk import or export operations
-      x-planned: true
+      
       security:
         - bearerAuth: []
       requestBody:
@@ -1056,7 +1132,7 @@ paths:
     get:
       tags: [Admin]
       summary: Data quality checks and anomalies
-      x-planned: true
+      
       security:
         - bearerAuth: []
       responses:

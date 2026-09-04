@@ -36,12 +36,8 @@ class AuthLoginTest extends TestCase
         $response->assertJsonValidationErrors(['username', 'password', 'access']);
     }
 
-    public function test_login_rejects_invalid_credentials_without_database(): void
+    public function test_login_rejects_invalid_credentials(): void
     {
-        if (! $this->hasLegacyUserTable()) {
-            $this->markTestSkipped('MariaDB `user_login` table not available in test DB.');
-        }
-
         $response = $this->postJson('/v1/auth/login', [
             'username' => 'nonexistent.user',
             'password' => 'wrong-password',
@@ -52,20 +48,23 @@ class AuthLoginTest extends TestCase
             ->assertJson(['message' => 'Invalid credentials.']);
     }
 
+    public function test_login_succeeds_with_valid_credentials(): void
+    {
+        $response = $this->postJson('/v1/auth/login', [
+            'username' => 'student.test',
+            'password' => 'secret',
+            'access' => 0,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonStructure(['access_token', 'refresh_token', 'user']);
+    }
+
     public function test_refresh_requires_refresh_token(): void
     {
         $response = $this->postJson('/v1/auth/refresh', []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['refresh_token']);
-    }
-
-    private function hasLegacyUserTable(): bool
-    {
-        try {
-            return \Illuminate\Support\Facades\Schema::hasTable('user_login');
-        } catch (\Throwable) {
-            return false;
-        }
     }
 }

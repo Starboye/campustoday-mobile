@@ -1,20 +1,20 @@
-/// Permission keys for admin modules (aligned with API RequirePermission middleware).
+/// Permission keys aligned with API RequirePermission middleware and SchoolCRM web RBAC.
 abstract final class AdminPermissions {
-  static const dashboard = 'dashboard.view';
-  static const students = 'students.manage';
-  static const teachers = 'teachers.manage';
-  static const attendance = 'attendance.manage';
-  static const attendanceLocks = 'attendance_locks.manage';
-  static const homework = 'homework.moderate';
-  static const marks = 'marks.manage';
-  static const fees = 'fees.manage';
-  static const planner = 'planner.manage';
-  static const approvals = 'approvals.manage';
-  static const notifications = 'notifications.manage';
-  static const exams = 'exams.manage';
-  static const analytics = 'analytics.view';
-  static const security = 'security.manage';
-  static const rbac = 'rbac.manage';
-  static const bulk = 'bulk.import';
-  static const dataQuality = 'data_quality.manage';
+  static const students = 'can_manage_users';
+  static const teachers = 'can_manage_users';
+  static const homework = 'can_manage_users';
+  static const approvals = 'can_manage_users';
+  static const bulk = 'can_manage_users';
+  static const attendance = 'can_delete_attendance';
+  static const attendanceLocks = 'can_delete_attendance';
+  static const marks = 'can_edit_marks';
+  static const fees = 'can_manage_fees';
+  static const planner = 'can_manage_planner';
+  static const notifications = 'can_manage_notifications';
+  static const exams = 'can_manage_exams';
+  static const analytics = 'can_view_analytics';
+  static const security = 'can_manage_security';
+  static const rbac = 'can_manage_delegation';
+  static const delegation = 'can_manage_delegation';
+  static const dataQuality = 'can_manage_data_quality';
 }

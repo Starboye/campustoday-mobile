@@ -44,12 +44,10 @@ class AttendanceQueueEntry {
   final DateTime createdAt;
 
   Map<String, dynamic> toRequestBody() => {
-        'standard': standard,
-        'section': section,
         'date': date,
         'student_id': studentId,
         'session': session.apiValue,
-        'status': status?.apiValue,
+        'status': status?.apiValue ?? 'absent',
       };
 }
 

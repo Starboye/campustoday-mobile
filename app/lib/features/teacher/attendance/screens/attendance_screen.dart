@@ -275,7 +275,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  setState(() => _errorMessage = e.toString());
+                  final message = e.toString().contains('locked')
+                      ? 'Attendance day is locked — changes cannot be saved.'
+                      : e.toString();
+                  setState(() => _errorMessage = message);
                 }
               }
             },

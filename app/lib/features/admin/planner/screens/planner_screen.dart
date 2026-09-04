@@ -20,60 +20,170 @@ class PlannerScreen extends ConsumerWidget {
       );
     }
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Planner'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Slots'),
-              Tab(text: 'Assignments'),
-              Tab(text: 'Timetables'),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useMasterDetail = constraints.maxWidth >= 900;
+
+        if (useMasterDetail) {
+          return DefaultTabController(
+            length: 3,
+            child: Scaffold(
+              appBar: AppBar(
+                title: const Text('Planner'),
+                bottom: const TabBar(
+                  tabs: [
+                    Tab(text: 'Slots'),
+                    Tab(text: 'Assignments'),
+                    Tab(text: 'Timetables'),
+                  ],
+                ),
+              ),
+              body: TabBarView(
+                children: [
+                  _masterDetailTab(
+                    ref.watch(plannerSlotsProvider),
+                    () => ref.invalidate(plannerSlotsProvider),
+                    (slot) => '${slot.day} · Period ${slot.period}',
+                    (slot) => slot.className,
+                  ),
+                  _masterDetailTab(
+                    ref.watch(plannerAssignmentsProvider),
+                    () => ref.invalidate(plannerAssignmentsProvider),
+                    (a) => a.subject,
+                    (a) => '${a.teacherName} · ${a.className}',
+                  ),
+                  _masterDetailTab(
+                    ref.watch(plannerTimetablesProvider),
+                    () => ref.invalidate(plannerTimetablesProvider),
+                    (t) => t.className,
+                    (t) => '${t.entries} entries',
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return DefaultTabController(
+          length: 3,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Planner'),
+              bottom: const TabBar(
+                tabs: [
+                  Tab(text: 'Slots'),
+                  Tab(text: 'Assignments'),
+                  Tab(text: 'Timetables'),
+                ],
+              ),
+            ),
+            body: TabBarView(
+              children: [
+                _PlannerTab(
+                  asyncValue: ref.watch(plannerSlotsProvider),
+                  onRetry: () => ref.invalidate(plannerSlotsProvider),
+                  builder: (items, width) => _gridOrList(
+                    width: width,
+                    items: items,
+                    tile: (slot) => ListTile(
+                      title: Text('${slot.day} · Period ${slot.period}'),
+                      subtitle: Text(slot.className),
+                    ),
+                  ),
+                ),
+                _PlannerTab(
+                  asyncValue: ref.watch(plannerAssignmentsProvider),
+                  onRetry: () => ref.invalidate(plannerAssignmentsProvider),
+                  builder: (items, width) => _gridOrList(
+                    width: width,
+                    items: items,
+                    tile: (a) => ListTile(
+                      title: Text(a.subject),
+                      subtitle: Text('${a.teacherName} · ${a.className}'),
+                    ),
+                  ),
+                ),
+                _PlannerTab(
+                  asyncValue: ref.watch(plannerTimetablesProvider),
+                  onRetry: () => ref.invalidate(plannerTimetablesProvider),
+                  builder: (items, width) => _gridOrList(
+                    width: width,
+                    items: items,
+                    tile: (t) => ListTile(
+                      title: Text(t.className),
+                      subtitle: Text('${t.entries} entries'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        body: TabBarView(
+        );
+      },
+    );
+  }
+
+  Widget _masterDetailTab<T>(
+    AsyncValue<List<T>> asyncValue,
+    VoidCallback onRetry,
+    String Function(T) title,
+    String Function(T) subtitle,
+  ) {
+    return asyncValue.when(
+      loading: () => const AdminLoadingView(),
+      error: (e, _) => AdminErrorView(message: 'Could not load planner data.\n$e', onRetry: onRetry),
+      data: (items) {
+        if (items.isEmpty) return const AdminEmptyView(message: 'No items.');
+        return Row(
           children: [
-            _PlannerTab(
-              asyncValue: ref.watch(plannerSlotsProvider),
-              onRetry: () => ref.invalidate(plannerSlotsProvider),
-              builder: (items, width) => _gridOrList(
-                width: width,
-                items: items,
-                tile: (slot) => ListTile(
-                  title: Text('${slot.day} · Period ${slot.period}'),
-                  subtitle: Text(slot.className),
-                ),
+            Expanded(
+              flex: 2,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (_, i) {
+                  final item = items[i];
+                  return ListTile(
+                    title: Text(title(item)),
+                    subtitle: Text(subtitle(item)),
+                  );
+                },
               ),
             ),
-            _PlannerTab(
-              asyncValue: ref.watch(plannerAssignmentsProvider),
-              onRetry: () => ref.invalidate(plannerAssignmentsProvider),
-              builder: (items, width) => _gridOrList(
-                width: width,
-                items: items,
-                tile: (a) => ListTile(
-                  title: Text(a.subject),
-                  subtitle: Text('${a.teacherName} · ${a.className}'),
+            const VerticalDivider(width: 1),
+            Expanded(
+              flex: 3,
+              child: GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 2.2,
                 ),
-              ),
-            ),
-            _PlannerTab(
-              asyncValue: ref.watch(plannerTimetablesProvider),
-              onRetry: () => ref.invalidate(plannerTimetablesProvider),
-              builder: (items, width) => _gridOrList(
-                width: width,
-                items: items,
-                tile: (t) => ListTile(
-                  title: Text(t.className),
-                  subtitle: Text('${t.entries} entries'),
-                ),
+                itemCount: items.length,
+                itemBuilder: (_, i) {
+                  final item = items[i];
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title(item), style: const TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(subtitle(item)),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 

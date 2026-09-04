@@ -80,6 +80,7 @@ class MarksListScreen extends ConsumerWidget {
                           title: Text(entry.studentName),
                           subtitle: Text('${entry.subject} · ${entry.term}'),
                           trailing: Text(entry.score.toStringAsFixed(1)),
+                          onTap: () => _editMark(context, ref, entry),
                         ),
                       );
                     },
@@ -120,6 +121,34 @@ class MarksListScreen extends ConsumerWidget {
     );
 
     studentId.dispose();
+    subject.dispose();
+    term.dispose();
+    score.dispose();
+  }
+
+  Future<void> _editMark(BuildContext context, WidgetRef ref, MarksEntry entry) async {
+    final subject = TextEditingController(text: entry.subject);
+    final term = TextEditingController(text: entry.term);
+    final score = TextEditingController(text: entry.score.toString());
+
+    await showAdminEditSheet(
+      context: context,
+      title: 'Edit marks',
+      fields: [
+        TextField(controller: subject, decoration: const InputDecoration(labelText: 'Subject')),
+        TextField(controller: term, decoration: const InputDecoration(labelText: 'Term')),
+        TextField(controller: score, decoration: const InputDecoration(labelText: 'Score'), keyboardType: TextInputType.number),
+      ],
+      onSave: () async {
+        await ref.read(marksRepositoryProvider).update(entry.id, {
+          'subject_name': subject.text.trim(),
+          'term': term.text.trim(),
+          'marks': double.tryParse(score.text.trim()) ?? entry.score,
+        });
+        ref.invalidate(marksListProvider);
+      },
+    );
+
     subject.dispose();
     term.dispose();
     score.dispose();

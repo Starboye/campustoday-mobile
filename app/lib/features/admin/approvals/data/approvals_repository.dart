@@ -26,7 +26,8 @@ class ApprovalsRepository {
     required String action,
     String? note,
   }) async {
-    await _dio.adminPost('/admin/approvals/$id/$action', data: {'note': note});
+    final body = action == 'reject' && note != null ? {'notes': note} : null;
+    await _dio.adminPost('/admin/approvals/$id/$action', data: body);
   }
 }
 
@@ -50,9 +51,9 @@ class ApprovalItem {
   factory ApprovalItem.fromJson(Map<String, dynamic> json) {
     return ApprovalItem(
       id: '${json['id']}',
-      type: json['type']?.toString() ?? '',
-      title: json['title']?.toString() ?? '',
-      requester: json['requester']?.toString() ?? '',
+      type: json['request_type']?.toString() ?? json['type']?.toString() ?? '',
+      title: json['title']?.toString() ?? json['request_type']?.toString() ?? 'Approval request',
+      requester: json['requested_by']?.toString() ?? json['requester']?.toString() ?? '',
       status: json['status']?.toString() ?? 'pending',
       createdAt: json['created_at']?.toString() ?? '',
     );

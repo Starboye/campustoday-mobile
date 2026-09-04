@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/delegation/screens/delegation_screen.dart';
 import '../../features/admin/analytics/screens/analytics_screen.dart';
 import '../../features/admin/approvals/screens/approvals_list_screen.dart';
 import '../../features/admin/attendance/screens/attendance_list_screen.dart';
@@ -37,6 +38,7 @@ import '../../features/teacher/announcements/screens/announcement_compose_screen
 import '../../features/teacher/class_timetable/screens/class_timetable_screen.dart';
 import '../../features/teacher/exam_timetable/screens/exam_timetable_screen.dart';
 import '../../features/teacher/homework/models/teacher_homework_item.dart';
+import '../../features/teacher/homework/screens/teacher_homework_edit_loader.dart';
 import '../../features/teacher/homework/screens/teacher_homework_form_screen.dart';
 import '../../features/teacher/homework/screens/teacher_homework_list_screen.dart';
 import '../../features/teacher/marks/screens/marks_screen.dart';
@@ -120,8 +122,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: ':id/edit',
                 builder: (_, state) {
                   final extra = state.extra;
-                  return TeacherHomeworkFormScreen(
-                    existing: extra is TeacherHomeworkItem ? extra : null,
+                  if (extra is TeacherHomeworkItem) {
+                    return TeacherHomeworkFormScreen(existing: extra);
+                  }
+                  return TeacherHomeworkEditLoader(
+                    homeworkId: state.pathParameters['id']!,
                   );
                 },
               ),
@@ -186,6 +191,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'people/rbac',
             builder: (_, __) => const RolesListScreen(),
+            routes: [
+              GoRoute(
+                path: 'users/:userId',
+                builder: (_, state) => AssignRolesScreen(
+                  userId: state.pathParameters['userId']!,
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'people/delegation',
+            builder: (_, __) => const DelegationScreen(),
             routes: [
               GoRoute(
                 path: 'users/:userId',

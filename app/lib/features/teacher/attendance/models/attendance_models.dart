@@ -51,14 +51,27 @@ class StudentAttendanceRow {
   }
 
   factory StudentAttendanceRow.fromJson(Map<String, dynamic> json) {
-    final raw = json['sessions'] as Map<String, dynamic>? ?? {};
+    if (json['sessions'] is Map) {
+      final raw = json['sessions'] as Map<String, dynamic>;
+      return StudentAttendanceRow(
+        studentId: json['student_id'] as String,
+        name: json['name'] as String,
+        rollNo: json['roll_no'] as String? ?? '',
+        sessions: {
+          for (final session in AttendanceSession.values)
+            session: attendanceStatusFromApi(raw[session.apiValue] as String?),
+        },
+      );
+    }
+
     return StudentAttendanceRow(
       studentId: json['student_id'] as String,
-      name: json['name'] as String,
+      name: json['name'] as String? ?? '',
       rollNo: json['roll_no'] as String? ?? '',
       sessions: {
-        for (final session in AttendanceSession.values)
-          session: attendanceStatusFromApi(raw[session.apiValue] as String?),
+        AttendanceSession.morning: attendanceStatusFromApi(json['morning'] as String?),
+        AttendanceSession.afternoon: attendanceStatusFromApi(json['afternoon'] as String?),
+        AttendanceSession.evening: attendanceStatusFromApi(json['evening'] as String?),
       },
     );
   }
@@ -90,14 +103,13 @@ class AttendanceSheet {
   }
 
   factory AttendanceSheet.fromJson(Map<String, dynamic> json) {
+    final items = json['items'] as List<dynamic>? ?? json['students'] as List<dynamic>? ?? [];
     return AttendanceSheet(
       date: json['date'] as String,
       standard: json['standard'] as int,
       section: json['section'] as String,
       locked: json['locked'] as bool? ?? false,
-      students: (json['students'] as List<dynamic>)
-          .map((e) => StudentAttendanceRow.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      students: items.map((e) => StudentAttendanceRow.fromJson(e as Map<String, dynamic>)).toList(),
     );
   }
 }

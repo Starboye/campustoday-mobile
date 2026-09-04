@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\UserLogin;
-use App\Services\JwtService;
 use Tests\TestCase;
 
 class TeacherAttendanceTest extends TestCase
@@ -18,12 +16,7 @@ class TeacherAttendanceTest extends TestCase
 
     public function test_attendance_rejects_student_token(): void
     {
-        $token = app(JwtService::class)->issueAccessToken(
-            $this->fakeUser(access: 0),
-            [],
-        );
-
-        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->studentToken())
             ->getJson('/v1/teacher/attendance?class=10&section=A&date=2026-09-04');
 
         $response->assertStatus(403)
@@ -32,16 +25,7 @@ class TeacherAttendanceTest extends TestCase
 
     public function test_attendance_validates_query_parameters(): void
     {
-        if (! $this->hasTestDatabase()) {
-            $this->markTestSkipped('SQLite PDO driver not available in test environment.');
-        }
-
-        $token = app(JwtService::class)->issueAccessToken(
-            $this->fakeUser(access: 1),
-            [],
-        );
-
-        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->teacherToken())
             ->getJson('/v1/teacher/attendance');
 
         $response->assertStatus(422);
@@ -60,49 +44,26 @@ class TeacherAttendanceTest extends TestCase
             ->assertJson(['message' => 'Unauthenticated.']);
     }
 
-    public function test_attendance_index_returns_payload_when_tables_exist(): void
+    public function test_attendance_index_returns_payload_for_allocated_class(): void
     {
-        if (! $this->hasLegacyTables()) {
-            $this->markTestSkipped('MariaDB attendance tables not available in test DB.');
-        }
-
-        $token = app(JwtService::class)->issueAccessToken(
-            $this->fakeUser(access: 1),
-            [],
-        );
-
-        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->teacherToken())
             ->getJson('/v1/teacher/attendance?class=10&section=A&date=2026-09-04');
 
-        $this->assertContains($response->status(), [200, 403, 501]);
+        $response->assertOk()
+            ->assertJsonStructure(['date', 'standard', 'section', 'items']);
     }
 
-    private function fakeUser(int $access): UserLogin
+    public function test_attendance_update_saves_record(): void
     {
-        $user = new UserLogin;
-        $user->id = 'test-teacher-1';
-        $user->name = 'Test Teacher';
-        $user->access = $access;
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->teacherToken())
+            ->putJson('/v1/teacher/attendance', [
+                'student_id' => 'student-1',
+                'date' => '2026-09-04',
+                'session' => 'morning',
+                'status' => 'present',
+            ]);
 
-        return $user;
-    }
-
-    private function hasLegacyTables(): bool
-    {
-        if (! $this->hasTestDatabase()) {
-            return false;
-        }
-
-        try {
-            return \Illuminate\Support\Facades\Schema::hasTable('attendance')
-                && \Illuminate\Support\Facades\Schema::hasTable('student_info');
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
-    private function hasTestDatabase(): bool
-    {
-        return in_array('sqlite', \PDO::getAvailableDrivers(), true);
+        $response->assertOk()
+            ->assertJson(['message' => 'Attendance updated.']);
     }
 }

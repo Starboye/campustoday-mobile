@@ -23,6 +23,13 @@ const peopleModules = [
     permission: AdminPermissions.rbac,
     route: '/admin/people/rbac',
   ),
+  AdminModuleEntry(
+    title: 'Delegation',
+    subtitle: 'Delegate admin roles to users',
+    icon: Icons.assignment_ind_outlined,
+    permission: AdminPermissions.delegation,
+    route: '/admin/people/delegation',
+  ),
 ];
 
 const academicsModules = [

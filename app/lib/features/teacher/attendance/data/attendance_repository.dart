@@ -45,7 +45,7 @@ class AttendanceRepository {
     final data = await _dio.getJson<Map<String, dynamic>>(
       '/teacher/attendance',
       queryParameters: {
-        'standard': standard,
+        'class': standard,
         'section': section,
         'date': date,
       },
@@ -62,12 +62,10 @@ class AttendanceRepository {
     required AttendanceStatus? status,
   }) async {
     final payload = {
-      'standard': standard,
-      'section': section,
       'date': date,
       'student_id': studentId,
       'session': session.apiValue,
-      'status': status?.apiValue,
+      'status': status?.apiValue ?? 'absent',
     };
 
     if (!await _connectivity.isOnline()) {

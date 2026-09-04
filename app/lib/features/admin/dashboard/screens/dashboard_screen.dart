@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../core/admin_permissions.dart';
-import '../../core/permission.dart';
 import '../../core/widgets/admin_states.dart';
 import '../../../auth/providers/auth_controller.dart';
 import '../providers/dashboard_providers.dart';
@@ -15,7 +13,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).value;
-    if (!can(user, AdminPermissions.dashboard)) {
+    if (user == null || !user.isAdmin) {
       return const AdminEmptyView(message: 'You do not have dashboard access.');
     }
 

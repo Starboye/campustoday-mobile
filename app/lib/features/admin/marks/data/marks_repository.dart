@@ -28,11 +28,17 @@ class MarksRepository {
     final data = await _dio.adminPost<dynamic>('/admin/marks', data: body);
     return MarksEntry.fromJson(parseItemData(data));
   }
+
+  Future<MarksEntry> update(String id, Map<String, dynamic> body) async {
+    final data = await _dio.adminPut<dynamic>('/admin/marks/$id', data: body);
+    return MarksEntry.fromJson(parseItemData(data));
+  }
 }
 
 class MarksEntry {
   const MarksEntry({
     required this.id,
+    required this.studentId,
     required this.studentName,
     required this.subject,
     required this.term,
@@ -40,6 +46,7 @@ class MarksEntry {
   });
 
   final String id;
+  final String studentId;
   final String studentName;
   final String subject;
   final String term;
@@ -48,6 +55,7 @@ class MarksEntry {
   factory MarksEntry.fromJson(Map<String, dynamic> json) {
     return MarksEntry(
       id: '${json['id']}',
+      studentId: json['student_id']?.toString() ?? '',
       studentName: json['student_name']?.toString() ?? '',
       subject: json['subject_name']?.toString() ?? json['subject']?.toString() ?? '',
       term: json['term']?.toString() ?? '',

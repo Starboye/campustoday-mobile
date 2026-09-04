@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'attendance_queue.dart';
 import 'connectivity_service.dart';
+import '../../features/teacher/attendance/providers/attendance_providers.dart';
 
 final pendingAttendanceCountProvider = FutureProvider.autoDispose<int>((ref) {
   return ref.watch(attendanceQueueProvider).count();
@@ -16,6 +17,7 @@ final attendanceSyncListenerProvider = Provider<void>((ref) {
     final result = await sync.syncPending();
     if (result.synced > 0) {
       ref.invalidate(pendingAttendanceCountProvider);
+      ref.invalidate(attendanceSheetProvider);
     }
   });
 
