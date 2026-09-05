@@ -3,9 +3,9 @@
 Add to `C:\xampp\apache\conf\extra\httpd-vhosts.conf`:
 
 ```apache
-# CampusToday Mobile API (does not modify SchoolCRM)
-Alias /api "C:/xampp/htdocs/CampusToday-API/public"
-<Directory "C:/xampp/htdocs/CampusToday-API/public">
+# CampusToday Mobile API (monorepo: campustoday-mobile/api)
+Alias /api "C:/xampp/htdocs/campustoday-mobile/api/public"
+<Directory "C:/xampp/htdocs/campustoday-mobile/api/public">
     AllowOverride All
     Require all granted
 </Directory>
@@ -24,7 +24,7 @@ Restart Apache from XAMPP Control Panel.
 ## Verify dual-stack (homework)
 
 1. Log in on web as student `aditya.krishnan` / `Demo@2026`
-2. Open Homework for today's date — note assignments for class 8-A
+2. Open Homework for today's date
 3. Call API:
    ```powershell
    $body = '{"username":"aditya.krishnan","password":"Demo@2026","access":0}'
@@ -32,13 +32,12 @@ Restart Apache from XAMPP Control Panel.
    $h = @{ Authorization = "Bearer $($login.access_token)" }
    Invoke-RestMethod -Uri "http://localhost/api/v1/student/homework?date=2026-09-04" -Headers $h
    ```
-4. Same `homeworks` rows appear in both (same `id`, `title`, `subject_name`).
 
-## Windows Task Scheduler (later — notification cron)
+## Windows Task Scheduler (notification cron)
 
 ```
 Program: C:\xampp\php\php.exe
-Arguments: C:\xampp\htdocs\CampusToday-API\artisan schedule:run
-Start in: C:\xampp\htdocs\CampusToday-API
+Arguments: C:\xampp\htdocs\campustoday-mobile\api\artisan schedule:run
+Start in: C:\xampp\htdocs\campustoday-mobile\api
 Trigger: Every 1 minute
 ```
